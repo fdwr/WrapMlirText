@@ -136,7 +136,7 @@ namespace TextWrapper
         // Sigl,Idnt - no break between sigil punctuation and identifier
         // otherwise - can break anywhere else
         //
-        public static LboBf[,] mlirBreakPairTable = new LboBf[,]
+        public static LboBf[,] breakPairTable = new LboBf[,]
         {
             //           None, Spac, Brek, Cmnt, Idnt, Open, Clos, Delm, Sigl, Othr, Nmbr, Strg,
             //                 ' '   CRLF  //    abc   ({[<   )}]> ,     #%!   +-*   123   "az"
@@ -161,7 +161,7 @@ namespace TextWrapper
         // Map current token category to breaking flags which apply to the entire token's character range,
         // such as IsOpening or IsInvisible.
         //
-        public static LboBf[] mlirCategoryBreakFlags = new LboBf[]
+        public static LboBf[] categoryBreakFlags = new LboBf[]
         {
             //  None, Spac, Brek, Cmnt, Idnt, Open, Clos, Delm, Sigl, Othr, Nmbr, Strg,
             //        ' '   CRLF  //    abc   ({[<   )}]> ,     #%!   +-*   123   "az"
