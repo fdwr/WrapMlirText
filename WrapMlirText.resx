@@ -1,0 +1,161 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="textBoxInput.Text" xml:space="preserve">
+    <value>dxgml.module {
+  dxgml_subgraph.subgraph @subgraph attributes {configuration = #dxgml_subgraph.supported_config&lt;layoutCapabilities = {}, aliasingCapabilities = {}, foreign_config = {class_name = "ConvolutionSubgraph"}, requiredScratchMemorySizes = [398201472], requiredAlignments = &lt;arguments = [], scratchMemorySegments = [1]&gt;, preprocessedInputs = [], preprocessingInputs = [], preprocessedDataSizes = []&gt;, functional = @convolution_0, interface = #dxgml.interface&lt;name = "dxgml_subgraph", version = "0.1.0"&gt;} {
+    dxgml_subgraph.functional_definition private @convolution_0(%arg0: !dxgml.tensor&lt;1x4x2160x3840x!dxgml.float16&gt;, %arg1: !dxgml.tensor&lt;32x4x3x3x!dxgml.float16&gt;, %arg2: !dxgml.tensor&lt;32x!dxgml.float16&gt;) -&gt; !dxgml.tensor&lt;1x32x1080x1920x!dxgml.float16&gt; {
+      %0 = dxgml_op.convolution (%arg0, %arg1, %arg2) {dilations = #dxgml.dense_integer_elements&lt;[1, 1]&gt; : !dxgml.tensor&lt;2x!dxgml.int64&gt;, direction = #dxgml_op.convolution_direction_enum_attr&lt;convolution_direction_forward&gt;, end_padding = #dxgml.dense_integer_elements&lt;[1, 1]&gt; : !dxgml.tensor&lt;2x!dxgml.int64&gt;, group_count = #dxgml.integer&lt;1 : !dxgml.int64&gt;, mode = #dxgml_op.convolution_mode_enum_attr&lt;convolution_mode_cross_correlation&gt;, start_padding = #dxgml.dense_integer_elements&lt;[1, 1]&gt; : !dxgml.tensor&lt;2x!dxgml.int64&gt;, strides = #dxgml.dense_integer_elements&lt;[2, 2]&gt; : !dxgml.tensor&lt;2x!dxgml.int64&gt;} : (!dxgml.tensor&lt;1x4x2160x3840x!dxgml.float16&gt;, !dxgml.tensor&lt;32x4x3x3x!dxgml.float16&gt;, !dxgml.tensor&lt;32x!dxgml.float16&gt;) -&gt; !dxgml.tensor&lt;1x32x1080x1920x!dxgml.float16&gt;
+      dxgml.return %0 : !dxgml.tensor&lt;1x32x1080x1920x!dxgml.float16&gt;
+    }
+  }
+  dxgml_partition.partition @partition(%arg0: !dxgml_memory.memref&lt;1x4x2160x3840x!dxgml.float16&gt;, %arg1: !dxgml_memory.memref&lt;32x4x3x3x!dxgml.float16&gt;, %arg2: !dxgml_memory.memref&lt;32x!dxgml.float16&gt;, %arg3: !dxgml_memory.memref&lt;1x32x1080x1920x!dxgml.float16&gt;, %arg4: !dxgml_memory.memref&lt;398201472x!dxgml.int8&gt;) {
+    dxgml.invoke @subgraph(%arg0, %arg1, %arg2, %arg3, %arg4) : (!dxgml_memory.memref&lt;1x4x2160x3840x!dxgml.float16&gt;, !dxgml_memory.memref&lt;32x4x3x3x!dxgml.float16&gt;, !dxgml_memory.memref&lt;32x!dxgml.float16&gt;, !dxgml_memory.memref&lt;1x32x1080x1920x!dxgml.float16&gt;, !dxgml_memory.memref&lt;398201472x!dxgml.int8&gt;) -&gt; ()
+    dxgml.return
+  }
+  dxgml_subgraph.subgraph @subgraph_2 attributes {configuration = #dxgml_subgraph.supported_config&lt;layoutCapabilities = {}, aliasingCapabilities = {}, foreign_config = {class_name = "ReluSubgraph"}, requiredScratchMemorySizes = [], requiredAlignments = &lt;arguments = [], scratchMemorySegments = []&gt;, preprocessedInputs = [], preprocessingInputs = [], preprocessedDataSizes = []&gt;, functional = @relu_1, interface = #dxgml.interface&lt;name = "dxgml_subgraph", version = "0.1.0"&gt;} {
+    dxgml_subgraph.functional_definition private @relu_1(%arg0: !dxgml.tensor&lt;1x32x1080x1920x!dxgml.float16&gt;) -&gt; !dxgml.tensor&lt;1x32x1080x1920x!dxgml.float16&gt; {
+      %0 = dxgml_op.relu (%arg0) : (!dxgml.tensor&lt;1x32x1080x1920x!dxgml.float16&gt;) -&gt; !dxgml.tensor&lt;1x32x1080x1920x!dxgml.float16&gt;
+      dxgml.return %0 : !dxgml.tensor&lt;1x32x1080x1920x!dxgml.float16&gt;
+    }
+  }
+  dxgml_partition.partition @partition_3(%arg0: !dxgml_memory.memref&lt;1x32x1080x1920x!dxgml.float16&gt;, %arg1: !dxgml_memory.memref&lt;1x32x1080x1920x!dxgml.float16&gt;) {
+    dxgml.invoke @subgraph_2(%arg0, %arg1) : (!dxgml_memory.memref&lt;1x32x1080x1920x!dxgml.float16&gt;, !dxgml_memory.memref&lt;1x32x1080x1920x!dxgml.float16&gt;) -&gt; ()
+    dxgml.return
+  }
+  dxgml.program @Conv_Relu_4(%arg0: !dxgml_memory.memref&lt;1x4x2160x3840x!dxgml.float16&gt;, %arg1: !dxgml_memory.memref&lt;1x32x1080x1920x!dxgml.float16&gt;, %arg2: !dxgml_memory.memref&lt;530911872x!dxgml.int8&gt;) {
+    %0 = dxgml_op.constant_value(0 : !dxgml.uint64)
+    %1 = dxgml_op.constant_value(132710400 : !dxgml.uint64)
+    %2 = dxgml_op.constant(&lt;_conv1.weight&gt;) : !dxgml_memory.memref&lt;32x4x3x3x!dxgml.float16&gt;
+    %3 = dxgml_op.constant(&lt;_conv1.bias&gt;) : !dxgml_memory.memref&lt;32x!dxgml.float16&gt;
+    %4 = dxgml_op.constant_value(0 : !dxgml.uint64)
+    %5 = dxgml_memory.view_memref %arg2[%4] : !dxgml_memory.memref&lt;530911872x!dxgml.int8&gt; to !dxgml_memory.memref&lt;1x32x1080x1920x!dxgml.float16&gt;
+    %6 = dxgml_op.constant_value(132710400 : !dxgml.uint64)
+    %7 = dxgml_memory.view_memref %arg2[%6] : !dxgml_memory.memref&lt;530911872x!dxgml.int8&gt; to !dxgml_memory.memref&lt;398201472x!dxgml.int8&gt;
+    dxgml.invoke @partition(%arg0, %2, %3, %5, %7) : (!dxgml_memory.memref&lt;1x4x2160x3840x!dxgml.float16&gt;, !dxgml_memory.memref&lt;32x4x3x3x!dxgml.float16&gt;, !dxgml_memory.memref&lt;32x!dxgml.float16&gt;, !dxgml_memory.memref&lt;1x32x1080x1920x!dxgml.float16&gt;, !dxgml_memory.memref&lt;398201472x!dxgml.int8&gt;) -&gt; ()
+    dxgml.invoke @partition_3(%5, %arg1) : (!dxgml_memory.memref&lt;1x32x1080x1920x!dxgml.float16&gt;, !dxgml_memory.memref&lt;1x32x1080x1920x!dxgml.float16&gt;) -&gt; ()
+    dxgml.return
+  }
+}</value>
+  </data>
+  <data name="textBoxRuler.Text" xml:space="preserve">
+    <value>    0         1         2         3         4         5         6         7         8         9         10        11
+&lt;--------&gt;&lt;--------&gt;&lt;--------&gt;&lt;--------&gt;&lt;--------&gt;&lt;--------&gt;&lt;--------&gt;&lt;--------&gt;&lt;--------&gt;&lt;--------&gt;&lt;--------&gt;&lt;--------&gt;</value>
+  </data>
+</root>
