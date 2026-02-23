@@ -43,14 +43,18 @@
             this.textBoxBreakFlags = new System.Windows.Forms.TextBox();
             this.labelLineRanges = new System.Windows.Forms.Label();
             this.textBoxLineRanges = new System.Windows.Forms.TextBox();
+            this.label1 = new System.Windows.Forms.Label();
+            this.textBoxWrapWidth = new System.Windows.Forms.TextBox();
+            this.label2 = new System.Windows.Forms.Label();
+            this.textBoxIndentSize = new System.Windows.Forms.TextBox();
             this.SuspendLayout();
             // 
             // buttonWrap
             // 
-            this.buttonWrap.Location = new System.Drawing.Point(8, 624);
+            this.buttonWrap.Location = new System.Drawing.Point(8, 640);
             this.buttonWrap.Name = "buttonWrap";
             this.buttonWrap.Size = new System.Drawing.Size(104, 24);
-            this.buttonWrap.TabIndex = 10;
+            this.buttonWrap.TabIndex = 11;
             this.buttonWrap.Text = "&Wrap";
             this.buttonWrap.UseVisualStyleBackColor = true;
             this.buttonWrap.Click += new System.EventHandler(this.buttonWrap_Click);
@@ -59,13 +63,13 @@
             // 
             this.textBoxOutput.Font = new System.Drawing.Font("Consolas", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.textBoxOutput.HideSelection = false;
-            this.textBoxOutput.Location = new System.Drawing.Point(8, 448);
+            this.textBoxOutput.Location = new System.Drawing.Point(8, 464);
             this.textBoxOutput.Multiline = true;
             this.textBoxOutput.Name = "textBoxOutput";
             this.textBoxOutput.ReadOnly = true;
             this.textBoxOutput.ScrollBars = System.Windows.Forms.ScrollBars.Both;
             this.textBoxOutput.Size = new System.Drawing.Size(1000, 168);
-            this.textBoxOutput.TabIndex = 9;
+            this.textBoxOutput.TabIndex = 10;
             this.textBoxOutput.Text = "(click the Wrap button)";
             this.textBoxOutput.WordWrap = false;
             // 
@@ -74,23 +78,23 @@
             this.textBoxInput.AcceptsReturn = true;
             this.textBoxInput.Font = new System.Drawing.Font("Consolas", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.textBoxInput.HideSelection = false;
-            this.textBoxInput.Location = new System.Drawing.Point(8, 24);
+            this.textBoxInput.Location = new System.Drawing.Point(8, 32);
             this.textBoxInput.Multiline = true;
             this.textBoxInput.Name = "textBoxInput";
             this.textBoxInput.ScrollBars = System.Windows.Forms.ScrollBars.Both;
             this.textBoxInput.Size = new System.Drawing.Size(1000, 168);
-            this.textBoxInput.TabIndex = 0;
+            this.textBoxInput.TabIndex = 1;
             this.textBoxInput.Text = resources.GetString("textBoxInput.Text");
             // 
             // labelTokens
             // 
             this.labelTokens.AutoSize = true;
             this.labelTokens.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.labelTokens.Location = new System.Drawing.Point(8, 200);
+            this.labelTokens.Location = new System.Drawing.Point(8, 208);
             this.labelTokens.Name = "labelTokens";
             this.labelTokens.Size = new System.Drawing.Size(53, 13);
-            this.labelTokens.TabIndex = 1;
-            this.labelTokens.Text = "Tokens:";
+            this.labelTokens.TabIndex = 2;
+            this.labelTokens.Text = "&Tokens:";
             // 
             // labelUnwrapped
             // 
@@ -106,23 +110,23 @@
             // 
             this.labelWrapped.AutoSize = true;
             this.labelWrapped.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.labelWrapped.Location = new System.Drawing.Point(8, 432);
+            this.labelWrapped.Location = new System.Drawing.Point(8, 400);
             this.labelWrapped.Name = "labelWrapped";
-            this.labelWrapped.Size = new System.Drawing.Size(62, 13);
+            this.labelWrapped.Size = new System.Drawing.Size(126, 13);
             this.labelWrapped.TabIndex = 8;
-            this.labelWrapped.Text = "Wrapped:";
+            this.labelWrapped.Text = "&Output text wrapped:";
             // 
             // textBoxTokens
             // 
             this.textBoxTokens.Font = new System.Drawing.Font("Consolas", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.textBoxTokens.HideSelection = false;
-            this.textBoxTokens.Location = new System.Drawing.Point(8, 216);
+            this.textBoxTokens.Location = new System.Drawing.Point(8, 224);
             this.textBoxTokens.Multiline = true;
             this.textBoxTokens.Name = "textBoxTokens";
             this.textBoxTokens.ReadOnly = true;
             this.textBoxTokens.ScrollBars = System.Windows.Forms.ScrollBars.Both;
             this.textBoxTokens.Size = new System.Drawing.Size(368, 168);
-            this.textBoxTokens.TabIndex = 2;
+            this.textBoxTokens.TabIndex = 3;
             this.textBoxTokens.Text = "(click the Wrap button)";
             this.textBoxTokens.WordWrap = false;
             // 
@@ -130,24 +134,24 @@
             // 
             this.labelInputText.AutoSize = true;
             this.labelInputText.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.labelInputText.Location = new System.Drawing.Point(8, 8);
+            this.labelInputText.Location = new System.Drawing.Point(8, 16);
             this.labelInputText.Name = "labelInputText";
             this.labelInputText.Size = new System.Drawing.Size(65, 13);
-            this.labelInputText.TabIndex = 11;
-            this.labelInputText.Text = "Input text:";
+            this.labelInputText.TabIndex = 0;
+            this.labelInputText.Text = "&Input text:";
             // 
             // textBoxRuler
             // 
             this.textBoxRuler.BackColor = System.Drawing.SystemColors.Control;
             this.textBoxRuler.Enabled = false;
             this.textBoxRuler.Font = new System.Drawing.Font("Consolas", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.textBoxRuler.Location = new System.Drawing.Point(8, 392);
+            this.textBoxRuler.Location = new System.Drawing.Point(8, 416);
             this.textBoxRuler.Margin = new System.Windows.Forms.Padding(0);
             this.textBoxRuler.Multiline = true;
             this.textBoxRuler.Name = "textBoxRuler";
             this.textBoxRuler.ReadOnly = true;
-            this.textBoxRuler.Size = new System.Drawing.Size(1000, 32);
-            this.textBoxRuler.TabIndex = 7;
+            this.textBoxRuler.Size = new System.Drawing.Size(1000, 46);
+            this.textBoxRuler.TabIndex = 9;
             this.textBoxRuler.TabStop = false;
             this.textBoxRuler.Text = resources.GetString("textBoxRuler.Text");
             this.textBoxRuler.WordWrap = false;
@@ -160,7 +164,7 @@
             this.checkBoxWrap.Name = "checkBoxWrap";
             this.checkBoxWrap.Size = new System.Drawing.Size(52, 16);
             this.checkBoxWrap.TabIndex = 12;
-            this.checkBoxWrap.Text = "Wrap";
+            this.checkBoxWrap.Text = "Wra&p";
             this.checkBoxWrap.UseVisualStyleBackColor = true;
             this.checkBoxWrap.CheckedChanged += new System.EventHandler(this.checkBoxWrap_CheckedChanged);
             // 
@@ -168,23 +172,23 @@
             // 
             this.labelBreakFlags.AutoSize = true;
             this.labelBreakFlags.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.labelBreakFlags.Location = new System.Drawing.Point(384, 200);
+            this.labelBreakFlags.Location = new System.Drawing.Point(384, 208);
             this.labelBreakFlags.Name = "labelBreakFlags";
             this.labelBreakFlags.Size = new System.Drawing.Size(75, 13);
-            this.labelBreakFlags.TabIndex = 3;
-            this.labelBreakFlags.Text = "Break flags:";
+            this.labelBreakFlags.TabIndex = 4;
+            this.labelBreakFlags.Text = "&Break flags:";
             // 
             // textBoxBreakFlags
             // 
             this.textBoxBreakFlags.Font = new System.Drawing.Font("Consolas", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.textBoxBreakFlags.HideSelection = false;
-            this.textBoxBreakFlags.Location = new System.Drawing.Point(384, 216);
+            this.textBoxBreakFlags.Location = new System.Drawing.Point(384, 224);
             this.textBoxBreakFlags.Multiline = true;
             this.textBoxBreakFlags.Name = "textBoxBreakFlags";
             this.textBoxBreakFlags.ReadOnly = true;
             this.textBoxBreakFlags.ScrollBars = System.Windows.Forms.ScrollBars.Both;
             this.textBoxBreakFlags.Size = new System.Drawing.Size(296, 168);
-            this.textBoxBreakFlags.TabIndex = 4;
+            this.textBoxBreakFlags.TabIndex = 5;
             this.textBoxBreakFlags.Text = "(click the Wrap button)";
             this.textBoxBreakFlags.WordWrap = false;
             // 
@@ -192,32 +196,73 @@
             // 
             this.labelLineRanges.AutoSize = true;
             this.labelLineRanges.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.labelLineRanges.Location = new System.Drawing.Point(688, 200);
+            this.labelLineRanges.Location = new System.Drawing.Point(688, 208);
             this.labelLineRanges.Name = "labelLineRanges";
             this.labelLineRanges.Size = new System.Drawing.Size(77, 13);
-            this.labelLineRanges.TabIndex = 5;
-            this.labelLineRanges.Text = "Line ranges:";
+            this.labelLineRanges.TabIndex = 6;
+            this.labelLineRanges.Text = "&Line ranges:";
             // 
             // textBoxLineRanges
             // 
             this.textBoxLineRanges.Font = new System.Drawing.Font("Consolas", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.textBoxLineRanges.HideSelection = false;
-            this.textBoxLineRanges.Location = new System.Drawing.Point(688, 216);
+            this.textBoxLineRanges.Location = new System.Drawing.Point(688, 224);
             this.textBoxLineRanges.Multiline = true;
             this.textBoxLineRanges.Name = "textBoxLineRanges";
             this.textBoxLineRanges.ReadOnly = true;
             this.textBoxLineRanges.ScrollBars = System.Windows.Forms.ScrollBars.Both;
             this.textBoxLineRanges.Size = new System.Drawing.Size(320, 168);
-            this.textBoxLineRanges.TabIndex = 6;
+            this.textBoxLineRanges.TabIndex = 7;
             this.textBoxLineRanges.Text = "(click the Wrap button)";
             this.textBoxLineRanges.WordWrap = false;
             // 
+            // label1
+            // 
+            this.label1.AutoSize = true;
+            this.label1.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label1.Location = new System.Drawing.Point(152, 8);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(96, 13);
+            this.label1.TabIndex = 13;
+            this.label1.Text = "&Maximum width:";
+            // 
+            // textBoxWrapWidth
+            // 
+            this.textBoxWrapWidth.Location = new System.Drawing.Point(256, 8);
+            this.textBoxWrapWidth.Name = "textBoxWrapWidth";
+            this.textBoxWrapWidth.Size = new System.Drawing.Size(100, 20);
+            this.textBoxWrapWidth.TabIndex = 14;
+            this.textBoxWrapWidth.Text = "120";
+            // 
+            // label2
+            // 
+            this.label2.AutoSize = true;
+            this.label2.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label2.Location = new System.Drawing.Point(368, 8);
+            this.label2.Name = "label2";
+            this.label2.Size = new System.Drawing.Size(73, 13);
+            this.label2.TabIndex = 15;
+            this.label2.Text = "I&ndent size:";
+            // 
+            // textBoxIndentSize
+            // 
+            this.textBoxIndentSize.Location = new System.Drawing.Point(448, 8);
+            this.textBoxIndentSize.Name = "textBoxIndentSize";
+            this.textBoxIndentSize.Size = new System.Drawing.Size(100, 20);
+            this.textBoxIndentSize.TabIndex = 16;
+            this.textBoxIndentSize.Text = "4";
+            // 
             // formMain
             // 
+            this.AcceptButton = this.buttonWrap;
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.SystemColors.ControlDark;
-            this.ClientSize = new System.Drawing.Size(1016, 658);
+            this.ClientSize = new System.Drawing.Size(1016, 673);
+            this.Controls.Add(this.textBoxIndentSize);
+            this.Controls.Add(this.label2);
+            this.Controls.Add(this.textBoxWrapWidth);
+            this.Controls.Add(this.label1);
             this.Controls.Add(this.textBoxLineRanges);
             this.Controls.Add(this.labelLineRanges);
             this.Controls.Add(this.textBoxBreakFlags);
@@ -255,6 +300,10 @@
         private System.Windows.Forms.TextBox textBoxBreakFlags;
         private System.Windows.Forms.Label labelLineRanges;
         private System.Windows.Forms.TextBox textBoxLineRanges;
+        private System.Windows.Forms.Label label1;
+        private System.Windows.Forms.TextBox textBoxWrapWidth;
+        private System.Windows.Forms.Label label2;
+        private System.Windows.Forms.TextBox textBoxIndentSize;
     }
 }
 

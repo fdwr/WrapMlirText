@@ -18,9 +18,23 @@ namespace WrapMlirText
     {
         [DllImport("User32.dll", CharSet = CharSet.Unicode)]
         public static extern IntPtr SendMessage(System.IntPtr h, int msg, int wParam, int[] lParam);
+        const int WM_UPDATEUISTATE = 0x0128;
+        const int UISF_HIDEACCEL = 0x2;
+        const int UIS_CLEAR = 0x2;
 
-        public const int MaximumLineLength = 120;
-        public const int LineIndentationPerLevel = 4;
+        public uint TryParseWithDefault(string s, uint defaultValue) { return uint.TryParse(s, out uint value) ? value : defaultValue; }
+        public uint MaximumLineLength => TryParseWithDefault(textBoxWrapWidth.Text, 120);
+        public uint LineIndentationPerLevel => TryParseWithDefault(textBoxIndentSize.Text, 4);
+
+        protected override void WndProc(ref Message m)
+        {
+            // Show accelerator keys by default.
+            if (m.Msg == WM_UPDATEUISTATE)
+            {
+                m.WParam = (IntPtr)(UIS_CLEAR | (UISF_HIDEACCEL << 16));
+            }
+            base.WndProc(ref m);
+        }
 
         public formMain()
         {
@@ -46,19 +60,25 @@ namespace WrapMlirText
         private void buttonWrap_Click(object sender, EventArgs e)
         {
             string inputText = textBoxInput.Text;
+            uint maximumLineLength = MaximumLineLength;
+            uint lineIndentationPerLevel = LineIndentationPerLevel;
+
+            var breakpointOpportunities = MlirFormatProvider.AssignLineBreakpointOpportunities(inputText);
+            var lineRanges = MlirFormatProvider.GetLineRanges(inputText, breakpointOpportunities, maximumLineLength, lineIndentationPerLevel);
+
             string tokensText = MlirFormatProvider.GetTokensText(inputText);
             textBoxTokens.Text = tokensText;
             textBoxTokens.SelectionStart = 0; // For some reason, setting the text also selects all the text. So clear it.
             textBoxTokens.SelectionLength = 0;
-            string wrappedText = MlirFormatProvider.GetWrappedText(inputText, MaximumLineLength, LineIndentationPerLevel);
+            string wrappedText = MlirFormatProvider.GetWrappedText(inputText, breakpointOpportunities, lineRanges, LineIndentationPerLevel);
             textBoxOutput.Text = wrappedText;
             textBoxOutput.SelectionStart = 0;
             textBoxOutput.SelectionLength = 0;
-            string breakFlagsText = MlirFormatProvider.GetBreakFlagsText(inputText);
+            string breakFlagsText = MlirFormatProvider.GetBreakFlagsText(inputText, breakpointOpportunities);
             textBoxBreakFlags.Text = breakFlagsText;
             textBoxBreakFlags.SelectionStart = 0;
             textBoxBreakFlags.SelectionLength = 0;
-            string lineRangesText = MlirFormatProvider.GetLineRangesText(inputText, MaximumLineLength, LineIndentationPerLevel);
+            string lineRangesText = MlirFormatProvider.GetLineRangesText(inputText, breakpointOpportunities, lineRanges, LineIndentationPerLevel);
             textBoxLineRanges.Text = lineRangesText;
             textBoxLineRanges.SelectionStart = 0;
             textBoxLineRanges.SelectionLength = 0;
@@ -105,9 +125,10 @@ namespace WrapMlirText
             String,                 // Quoted string literal
         }
 
-        //--#pragma warning disable CS0169 // The fields are declared but never used
         public struct LineBreakpointOpportunity
         {
+            // Some of these breaking flags apply to the entire token's character range, while others only apply to the tail end
+            // of the token (e.g. the break opportunities after the code unit).
             [Flags]
             public enum BreakFlags : byte
             {
@@ -118,7 +139,7 @@ namespace WrapMlirText
                 CanSplitAfter      = 0b00001000, // Such as commas, semicolons, or other punctuation that typically separates items in a list.
                 IsOpening          = 0b00010000, // Such as opening parentheses, brackets, or braces.
                 IsClosing          = 0b00100000, // The character before closing parentheses, brackets, or braces.
-                ShouldSplitItems   = 0b01000000, // Split all items in a list onto separate lines if the list exceeds the maximum line length.
+                ShouldSplitItems   = 0b01000000, // Split all subitems in a list onto separate lines if the list exceeds the maximum line length (potentially present on opening punctuation).
                 IsInvisible        = 0b10000000, // Space/Tab/CR/LF. These characters do not contribute to ink width of trailing line width.
             }
 
@@ -134,11 +155,10 @@ namespace WrapMlirText
             public bool ShouldSplitItems => (breakFlags & BreakFlags.ShouldSplitItems) != 0;
             public bool IsInvisible => (breakFlags & BreakFlags.IsInvisible) != 0;
         }
-        //--#pragma warning restore CS0169 // The fields are declared but never used
 
-        // Similar to CharacterRange, but uses half-open intervals which are easier to update
-        // than First+Length.
-        struct LineRange
+        // Line range using starting and ending text positions, which is similar to System.Drawing.CharacterRange,
+        // except it uses half-open intervals which are easier to update and split than First + Length.
+        public struct LineRange
         {
             public uint start;
             public uint end;
@@ -152,7 +172,7 @@ namespace WrapMlirText
             }
         }
 
-        // Shorter aliases just for table usage.
+        // Shorter aliases for more compact table usage.
         const TokenCategory None = TokenCategory.None;
         const TokenCategory Spac = TokenCategory.Whitespace;
         const TokenCategory Brek = TokenCategory.LineBreak;
@@ -166,8 +186,9 @@ namespace WrapMlirText
         const TokenCategory Nmbr = TokenCategory.Number;
         const TokenCategory Strg = TokenCategory.String;
 
-        // ASCII character categories for quick lookup.
+        // Character categories for quick lookup.
         // Characters outside the ASCII range are treated as Identifier by default.
+        // MLIR doesn't appear to support Unicode identifiers anyway.
         static TokenCategory[] tokenCategories = new TokenCategory[128]
         {
         //              _0    _1    _2    _3    _4    _5    _6    _7    _8    _9    _A    _B    _C    _D    _E    _F
@@ -182,26 +203,20 @@ namespace WrapMlirText
         // 0x40 - 0x4F  @     A     B     C     D     E     F     G     H     I     J     K     L     M     N     O
                         Sigl, Idnt, Idnt, Idnt, Idnt, Idnt, Idnt, Idnt, Idnt, Idnt, Idnt, Idnt, Idnt, Idnt, Idnt, Idnt,
         // 0x50 - 0x5F  P     Q     R     S     T     U     V     W     X     Y     Z     [     \     ]     ^     _
-                        Idnt, Idnt, Idnt, Idnt, Idnt, Idnt, Idnt, Idnt, Idnt, Idnt, Idnt, Open, Othr, Clos, Othr, Idnt,
+                        Idnt, Idnt, Idnt, Idnt, Idnt, Idnt, Idnt, Idnt, Idnt, Idnt, Idnt, Open, Othr, Clos, Sigl, Idnt,
         // 0x60 - 0x6F  `     a     b     c     d     e     f     g     h     i     j     k     l     m     n     o
                         Othr, Idnt, Idnt, Idnt, Idnt, Idnt, Idnt, Idnt, Idnt, Idnt, Idnt, Idnt, Idnt, Idnt, Idnt, Idnt,
         // 0x70 - 0x7F  p     q     r     s     t     u     v     w     x     y     z     {     |     }     ~     DEL
                         Idnt, Idnt, Idnt, Idnt, Idnt, Idnt, Idnt, Idnt, Idnt, Idnt, Idnt, Open, Othr, Clos, Othr, None,
         };
 
-        const LboBf NoBr = LboBf.None;
-        const LboBf CnBr = LboBf.CanBreakAfter;
-        const LboBf MsBr = LboBf.MustBreakAfter   | LboBf.CanBreakAfter | LboBf.IsInvisible;
+        const LboBf BfNo = LboBf.None;
+        const LboBf BfCn = LboBf.CanBreakAfter;
+        const LboBf BfMs = LboBf.MustBreakAfter   | LboBf.CanBreakAfter | LboBf.IsInvisible;
         const LboBf CnSp = LboBf.CanBreakAfter    | LboBf.CanSplitAfter;
         const LboBf NoSp =                          LboBf.CanSplitAfter;
-        const LboBf OpBr = LboBf.IsOpening        | LboBf.CanBreakAfter;
-        const LboBf OpNo = LboBf.IsOpening;
-        const LboBf ClBr = LboBf.IsClosing        | LboBf.CanBreakAfter;
-        const LboBf ClNo = LboBf.IsClosing;
-        const LboBf WsBr = LboBf.CanBreakAfter    | LboBf.IsInvisible;
-        const LboBf WsNo =                          LboBf.IsInvisible;
 
-        // Map adjacent pair of tokens (first,second) to breaking flags.
+        // Map adjacent pair of tokens (previous,next) to breaking flags.
         // The table corresponds to these rules applied in order:
         //
         // Brek,any  - must break after line break
@@ -223,18 +238,29 @@ namespace WrapMlirText
         {
             //           None, Spac, Brek, Cmnt, Idnt, Open, Clos, Delm, Sigl, Othr, Nmbr, Strg,
             //                 ' '   CRLF  //    abc   ({[<   )}]> ,     #%!   +-*   123   "az"
-            /* None */  {NoBr, NoBr, NoBr, NoBr, NoBr, NoBr, NoBr, NoBr, NoBr, NoBr, NoBr, NoBr},
-            /* Spac */  {WsBr, WsNo, WsNo, WsBr, WsBr, WsBr, WsBr, WsNo, WsBr, WsBr, WsBr, WsBr},
-            /* Brek */  {MsBr, MsBr, MsBr, MsBr, MsBr, MsBr, MsBr, MsBr, MsBr, MsBr, MsBr, MsBr},
-            /* Cmnt */  {CnBr, NoBr, NoBr, CnBr, CnBr, NoBr, CnBr, NoBr, CnBr, CnBr, CnBr, CnBr},
-            /* Idnt */  {CnBr, NoBr, NoBr, CnBr, CnBr, NoBr, CnBr, NoBr, CnBr, CnBr, CnBr, CnBr},
-            /* Open */  {OpBr, OpBr, OpNo, OpBr, OpBr, OpBr, OpNo, OpBr, OpBr, OpBr, OpBr, OpBr},
-            /* Clos */  {ClBr, ClNo, ClNo, ClBr, ClBr, ClBr, ClBr, ClNo, ClBr, ClBr, ClBr, ClBr},
+            /* None */  {BfNo, BfNo, BfNo, BfNo, BfNo, BfNo, BfNo, BfNo, BfNo, BfNo, BfNo, BfNo},
+            /* Spac */  {BfCn, BfNo, BfNo, BfCn, BfCn, BfCn, BfCn, BfNo, BfCn, BfCn, BfCn, BfCn},
+            /* Brek */  {BfMs, BfMs, BfMs, BfMs, BfMs, BfMs, BfMs, BfMs, BfMs, BfMs, BfMs, BfMs},
+            /* Cmnt */  {BfCn, BfNo, BfNo, BfCn, BfCn, BfNo, BfCn, BfNo, BfCn, BfCn, BfCn, BfCn},
+            /* Idnt */  {BfCn, BfNo, BfNo, BfCn, BfCn, BfNo, BfCn, BfNo, BfCn, BfCn, BfCn, BfCn},
+            /* Open */  {BfCn, BfCn, BfNo, BfCn, BfCn, BfCn, BfNo, BfCn, BfCn, BfCn, BfCn, BfCn},
+            /* Clos */  {BfCn, BfNo, BfNo, BfCn, BfCn, BfCn, BfCn, BfNo, BfCn, BfCn, BfCn, BfCn},
             /* Delm */  {CnSp, NoSp, NoSp, CnSp, CnSp, CnSp, CnSp, CnSp, CnSp, CnSp, CnSp, CnSp},
-            /* Sigl */  {CnBr, NoBr, NoBr, CnBr, NoBr, NoBr, CnBr, NoBr, CnBr, CnBr, NoBr, CnBr},
-            /* Othr */  {CnBr, NoBr, NoBr, CnBr, CnBr, CnBr, CnBr, NoBr, CnBr, CnBr, CnBr, CnBr},
-            /* Nmbr */  {CnBr, NoBr, NoBr, CnBr, CnBr, CnBr, CnBr, NoBr, CnBr, CnBr, CnBr, CnBr},
-            /* Strg */  {CnBr, NoBr, NoBr, CnBr, CnBr, CnBr, CnBr, NoBr, CnBr, CnBr, CnBr, CnBr },
+            /* Sigl */  {BfCn, BfNo, BfNo, BfCn, BfNo, BfNo, BfCn, BfNo, BfCn, BfCn, BfNo, BfCn},
+            /* Othr */  {BfCn, BfNo, BfNo, BfCn, BfCn, BfCn, BfCn, BfNo, BfCn, BfCn, BfCn, BfCn},
+            /* Nmbr */  {BfCn, BfNo, BfNo, BfCn, BfCn, BfCn, BfCn, BfNo, BfCn, BfCn, BfCn, BfCn},
+            /* Strg */  {BfCn, BfNo, BfNo, BfCn, BfCn, BfCn, BfCn, BfNo, BfCn, BfCn, BfCn, BfCn},
+        };
+
+        const LboBf BfIi = LboBf.IsInvisible;
+        const LboBf BfOp = LboBf.IsOpening;
+        const LboBf BfCl = LboBf.IsClosing;
+
+        static LboBf[] categoryBreakFlags = new LboBf[]
+        {
+            //  None, Spac, Brek, Cmnt, Idnt, Open, Clos, Delm, Sigl, Othr, Nmbr, Strg,
+            //        ' '   CRLF  //    abc   ({[<   )}]> ,     #%!   +-*   123   "az"
+                BfNo, BfIi, BfIi, BfNo, BfNo, BfOp, BfCl, BfNo, BfNo, BfNo, BfNo, BfNo,
         };
 
         static Dictionary<char, char> openingClosingPairs = new Dictionary<char, char>
@@ -247,9 +273,7 @@ namespace WrapMlirText
 
         public static TokenCategory GetTokenCategory(char currentChar)
         {
-            return (currentChar < tokenCategories.Length)
-                ? tokenCategories[currentChar]
-                : TokenCategory.Identifier;
+            return (currentChar < tokenCategories.Length) ? tokenCategories[currentChar] : TokenCategory.Identifier;
         }
 
         public static TokenCategory ReadNextTokenCategory(string text, ref uint textPosition)
@@ -302,6 +326,7 @@ namespace WrapMlirText
                 return TokenCategory.Number;
 
             case TokenCategory.String:
+                // Find the end of the string, checking for \" to avoid ending early.
                 while (textPosition < text.Length)
                 {
                     char nextChar = text[(int)textPosition++];
@@ -318,7 +343,8 @@ namespace WrapMlirText
                 return TokenCategory.String;
 
             case TokenCategory.Identifier:
-                // Found an identifer.
+                // Consume the entire identifier and any inline numbers, plus infix characters like '_' and '.',
+                // but not other sigils like #, %, !.
                 while (textPosition < text.Length)
                 {
                     tokenCategory = GetTokenCategory(text[(int)textPosition]);
@@ -397,49 +423,51 @@ namespace WrapMlirText
 
             // Dummy for first case when there is no preceding text.
             LineBreakpointOpportunity dummyBreakpointOpportunity = new LineBreakpointOpportunity();
-            ref LineBreakpointOpportunity breakpointOpportunity = ref dummyBreakpointOpportunity;
+            ref LineBreakpointOpportunity previousBreakpointOpportunity = ref dummyBreakpointOpportunity;
 
             // Read every pair of adjacent tokens, and assign breaking flags.
             while (textPosition < inputText.Length)
             {
-                uint tokenTextPosition = textPosition;
-                TokenCategory tokenCategory = ReadNextTokenCategory(inputText, ref textPosition);
+                uint currentTokenStartPosition = textPosition;
+                TokenCategory currentTokenCategory = ReadNextTokenCategory(inputText, ref textPosition);
+                uint currentTokenLastPosition = textPosition - 1;
 
                 // Assign the breaking flags for this token pair.
                 // TODO: Consider another table for the current category to update breaking flags, setting IsOpening and such.
-                //--ref LineBreakpointOpportunity breakpointOpportunity = ref (tokenTextPosition > 0) ? ref breakpointOpportunities[(int)tokenTextPosition - 1] : ref dummyBreakpointOpportunity;
-                breakpointOpportunity.breakFlags |= breakPairTable[(int)previousTokenCategory, (int)tokenCategory];
+                previousBreakpointOpportunity.breakFlags |= breakPairTable[(int)previousTokenCategory, (int)currentTokenCategory];
                 int indentationLevel = delimiterStack.Count;
-                LboBf additionalBreakFlags = LboBf.None;
+                LboBf currentBreakOpportunityFlags = categoryBreakFlags[(int)currentTokenCategory];
 
                 // Handle any special categories.
-                switch (tokenCategory)
+                switch (currentTokenCategory)
                 {
                 case TokenCategory.Whitespace:
                 case TokenCategory.LineBreak:
-                    additionalBreakFlags = LboBf.IsInvisible;
+                    //currentBreakOpportunityFlags = LboBf.IsInvisible;
                     break;
 
                 case TokenCategory.PunctuationOpen:
                     // Push new level onto the stack.
-                    char leadingChar = inputText[(int)tokenTextPosition];
+                    char leadingChar = inputText[(int)currentTokenStartPosition];
                     if (leadingChar == '{')
                     {
-                        breakpointOpportunity.breakFlags |= LboBf.ShouldBreakAfter;
+                        previousBreakpointOpportunity.breakFlags |= LboBf.ShouldBreakAfter;
                     }
                     if (leadingChar != '[')
                     {
                         // For '{','<','(', we want to split items onto separate lines if the list exceeds the maximum line length,
                         // but for '[' we want to keep them on the same line if possible since they often contain short lists of
                         // attributes or numbers.
-                        breakpointOpportunities[(int)tokenTextPosition].breakFlags |= LboBf.ShouldSplitItems;
+                        breakpointOpportunities[(int)currentTokenStartPosition].breakFlags |= LboBf.ShouldSplitItems;
                     }
                     delimiterStack.Add(openingClosingPairs[leadingChar]);
                     break;
 
                 case TokenCategory.PunctuationClose:
                     // Pop stack until we find the matching opening delimiter.
-                    char trailingChar = inputText[(int)textPosition - 1];
+                    // Well formed text should always match on the first try, but we can be resilient to malformed text
+                    // by allowing mismatches and just popping until we find a match or run out of stack.
+                    char trailingChar = inputText[(int)currentTokenLastPosition];
                     while (delimiterStack.Count > 0)
                     {
                         char closingDelimiter = delimiterStack[delimiterStack.Count - 1];
@@ -453,22 +481,26 @@ namespace WrapMlirText
                     break;
                 }
 
-                // Set the indentation level for whole range of characters in the current token read.
+                // Update the next breakpoint opportunity's indentation level and flags for whole range of characters in
+                // the current token (not just the tail end).
                 byte cappedIndentationLevel = (byte)Math.Min(255, indentationLevel);
-                for (uint i = tokenTextPosition; i < textPosition; i++)
+                for (uint i = currentTokenStartPosition; i < textPosition; i++)
                 {
                     ref var currentBreakpoint = ref breakpointOpportunities[(int)i];
                     currentBreakpoint.indentationLevel = cappedIndentationLevel;
-                    currentBreakpoint.breakFlags |= additionalBreakFlags;
+                    currentBreakpoint.breakFlags |= currentBreakOpportunityFlags;
                 }
 
                 // Update for next round.
-                previousTokenCategory = tokenCategory;
-                breakpointOpportunity = ref breakpointOpportunities[(int)textPosition - 1];
+                previousTokenCategory = currentTokenCategory;
+                previousBreakpointOpportunity = ref breakpointOpportunities[(int)currentTokenLastPosition];
             }
 
-            // Ensure there's always a breakpoint at the end of the text (can simplify other logic later).
-            breakpointOpportunities[breakpointOpportunities.Length - 1].breakFlags |= LboBf.CanBreakAfter;
+            // Flush the last breakpoint opportunity, which will be the only one that doesn't get updated by the loop since
+            // there is no next token to trigger the update. Also ensure there's always a breakpoint at the end of the text,
+            // which can simplify later logic.
+            previousBreakpointOpportunity.breakFlags |= breakPairTable[(int)previousTokenCategory, (int)TokenCategory.None];
+            previousBreakpointOpportunity.breakFlags |= LboBf.CanBreakAfter;
 
             return breakpointOpportunities;
         }
@@ -491,16 +523,24 @@ namespace WrapMlirText
             return false;
         }
 
+        enum LookDirection
+        {
+            Forward,
+            Backward,
+        };
+
         static bool IsLineBreakAdjacent(
             LineBreakpointOpportunity[] breakpointOpportunities,
             uint textPosition,
-            bool lookBackward // Seek backward rather than forward
+            LookDirection lookDirection
             )
         {
             var breakpointLength = breakpointOpportunities.Length;
+            bool lookForward = (lookDirection == LookDirection.Forward);
+
             while (true)
             {
-                if (lookBackward ? (textPosition-- == 0) : (textPosition >= breakpointLength))
+                if (lookForward ? (textPosition >= breakpointLength) : (textPosition-- == 0))
                 {
                     break;
                 }
@@ -515,7 +555,7 @@ namespace WrapMlirText
                     return false;
                 }
 
-                if (!lookBackward)
+                if (lookForward)
                 {
                     ++textPosition;
                 }
@@ -523,7 +563,7 @@ namespace WrapMlirText
             return false;
         }
 
-        static List<LineRange> GetLineRanges(
+        public static List<LineRange> GetLineRanges(
             string inputText,
             LineBreakpointOpportunity[] breakpointOpportunities,
             uint maximumLineLength,
@@ -601,9 +641,6 @@ namespace WrapMlirText
                     }
                 }
 
-                string temp1 = inputText.Substring((int)lineRange.start, (int)lineRange.Length);
-                string temp2 = inputText.Substring((int)lineRange.start, (int)(breakPosition - lineRange.start));
-
                 // If no candidate breakpoints were found, jump to the end of the known line range for some forward progress.
                 // This could happen with a really long word.
                 if (breakPosition == lineRange.start)
@@ -634,72 +671,79 @@ namespace WrapMlirText
                     //
                     //      values = [1,2,3,4,5,6,7,8,9,10]
                     //               |<---- No, retain items because splitting every value would consume many lines.
-                    bool shouldSplitItems = false;
+                    bool shouldSplitDelimitedItems = false;
                     for (uint textPosition = breakPosition; textPosition-- > lineRange.start; )
                     {
                         var breakpoint = breakpointOpportunities[(int)textPosition];
-                        if (breakpoint.IsOpening && breakpoint.indentationLevel == minimumIndentationLevel)
-                        {
-                            // TODO: Look for trailing comment. e.g. "someParameter, // comment"
-                            //       to avoid splitting between the previous content.
+                        shouldSplitDelimitedItems = breakpoint.ShouldSplitItems;
 
-                            // Check if we should break before the previous opening punctuation. e.g.
-                            //
-                            //      someScope { someText moreLongTextHere }.
-                            //               /\<---- yes, break before curly braces.
-                            //
-                            //      function(parameterOne, parameterTwo)
-                            //             /\<---- no, keep parentheses on same line as call.
-                            // TODO: Check with {-# #-}
-                            if (textPosition > 0 &&
-                                breakpointOpportunities[(int)textPosition - 1].ShouldBreakAfter &&
-                                !IsLineBreakAdjacent(breakpointOpportunities, textPosition, lookBackward: true))
-                            {
-                                if (SplitLineRanges(lineRanges, lineIndex, textPosition))
-                                {
-                                    ++lineIndex;
-                                }
-                            }
-                            // Break after the opening punctuation.
-                            //
-                            //      someScope { someText moreLongTextHere }.
-                            //                /\<---- break after curly braces.
-                            //
-                            //      function(parameterOne, parameterTwo)
-                            //              /\<---- break after parentheses to separate parameters.
-                            // TODO: Check with {-# #-}
-                            if (!IsLineBreakAdjacent(breakpointOpportunities, textPosition + 1, lookBackward: false))
-                            {
-                                SplitLineRanges(lineRanges, lineIndex, textPosition + 1);
-                            }
-                            shouldSplitItems = breakpoint.ShouldSplitItems;
-                            break;
+                        if (!breakpoint.IsOpening || breakpoint.indentationLevel != minimumIndentationLevel)
+                        {
+                            continue; // Keep looking for the opening punctuation at the right level.
                         }
+
+                        // Break before certain opening punctuation. e.g.
+                        //
+                        //      someScope { someText moreLongTextHere }.
+                        //               /\<---- yes, break before curly braces.
+                        //
+                        //      function(parameterOne, parameterTwo)
+                        //             /\<---- no, keep parentheses on same line as call.
+                        // TODO: Check with {-# #-}
+                        if (textPosition > 0 &&
+                            breakpointOpportunities[(int)textPosition - 1].ShouldBreakAfter &&
+                            !IsLineBreakAdjacent(breakpointOpportunities, textPosition, LookDirection.Backward))
+                        {
+                            if (SplitLineRanges(lineRanges, lineIndex, textPosition))
+                            {
+                                ++lineIndex;
+                            }
+                        }
+                        // Break after the opening punctuation.
+                        //
+                        //      someScope { someText moreLongTextHere }
+                        //                /\<---- break after curly braces.
+                        //
+                        //      function(parameterOne, parameterTwo)
+                        //              /\<---- break after parentheses to separate parameters.
+                        // TODO: Check with {-# #-}
+                        if (!IsLineBreakAdjacent(breakpointOpportunities, textPosition + 1, LookDirection.Forward))
+                        {
+                            SplitLineRanges(lineRanges, lineIndex, textPosition + 1);
+                        }
+                        break;
                     }
 
+                    // Scan forward to split after closing punctuation and potentially split any items within the scope
+                    // that are at the same nesting level.
                     for (int nextLineIndex = lineIndex + 1; nextLineIndex < lineRanges.Count; ++nextLineIndex)
                     {
                         LineRange nextLineRange = lineRanges[nextLineIndex];
                         for (uint textPosition = nextLineRange.start; textPosition < nextLineRange.end; textPosition++)
                         {
+                            // Break before closing punctuation, unless there's already a line break. e.g.
+                            //
+                            //      someScope { someText moreLongTextHere }
+                            //                                           /\<---- break
                             var opportunity = breakpointOpportunities[(int)textPosition];
                             if (opportunity.indentationLevel <= minimumIndentationLevel)
                             {
-                                // Break closing punctuation, unless there's already a line break. e.g.
-                                //
-                                //      someScope { someText moreLongTextHere }.
-                                //                                           |<---- break
-                                if (!IsLineBreakAdjacent(breakpointOpportunities, textPosition, lookBackward: true))
+                                if (!IsLineBreakAdjacent(breakpointOpportunities, textPosition, LookDirection.Backward))
                                 {
                                     SplitLineRanges(lineRanges, nextLineIndex, textPosition);
                                 }
                                 break; // Exited the nested scope, such as after } ) >.
                             }
-                            else if (
-                                shouldSplitItems &&
+
+                            // Split after each delimited item. e.g.
+                            //
+                            //      config<capabilities = {}, subconfig = {}, alignment = {}, key = value>
+                            //                              /\              /\              /\
+                            if (
+                                shouldSplitDelimitedItems &&
                                 opportunity.indentationLevel == minimumIndentationLevel + 1 &&
                                 opportunity.CanSplitAfter &&
-                                !IsLineBreakAdjacent(breakpointOpportunities, textPosition + 1, lookBackward: false)
+                                !IsLineBreakAdjacent(breakpointOpportunities, textPosition + 1, LookDirection.Forward)
                                 )
                             {
                                 uint delimiterBreakPosition = textPosition + 1;
@@ -732,10 +776,8 @@ namespace WrapMlirText
             return tokensText.ToString();
         }
 
-        public static string GetBreakFlagsText(string inputText)
+        public static string GetBreakFlagsText(string inputText, LineBreakpointOpportunity[] breakpointOpportunities)
         {
-            LineBreakpointOpportunity[] breakpointOpportunities = AssignLineBreakpointOpportunities(inputText);
-
             var breakFlagsText = new StringBuilder();
 
             for (uint textPosition = 0; textPosition < inputText.Length; ++textPosition)
@@ -747,12 +789,11 @@ namespace WrapMlirText
 
         public static string GetLineRangesText(
             string inputText,
-            uint maximumLineLength,
+            LineBreakpointOpportunity[] breakpointOpportunities,
+            List<LineRange> lineRanges,
             uint lineIndentationPerLevel
             )
         {
-            var breakpointOpportunities = AssignLineBreakpointOpportunities(inputText);
-            var lineRanges = GetLineRanges(inputText, breakpointOpportunities, maximumLineLength, lineIndentationPerLevel);
             var lineRangesText = new StringBuilder();
 
             foreach (var lineRange in lineRanges)
@@ -770,7 +811,8 @@ namespace WrapMlirText
 
         public static string GetWrappedText(
             string inputText,
-            uint maximumLineLength,
+            LineBreakpointOpportunity[] breakpointOpportunities,
+            List<LineRange> lineRanges,
             uint lineIndentationPerLevel
             )
         {
@@ -779,30 +821,36 @@ namespace WrapMlirText
                 return String.Empty; // Nothing to wrap.
             }
 
-            var breakpointOpportunities = AssignLineBreakpointOpportunities(inputText);
-            var lineRanges = GetLineRanges(inputText, breakpointOpportunities, maximumLineLength, lineIndentationPerLevel);
+            Debug.Assert(breakpointOpportunities != null);
+            Debug.Assert(lineRanges != null);
+            Debug.Assert(breakpointOpportunities.Length == inputText.Length);
+
             var wrappedText = new StringBuilder();
 
-            // Concatenate the lines together, inserting additional line breaks as needed.
+            // Concatenate the lines together, inserting indentation and additional line breaks as needed.
             foreach (var lineRange in lineRanges)
             {
-                uint lineIndentationLevel = lineRange.start < breakpointOpportunities.Length ? breakpointOpportunities[(int)lineRange.start].indentationLevel : 0u;
+                uint lineIndentationLevel = (lineRange.start < breakpointOpportunities.Length) ? breakpointOpportunities[(int)lineRange.start].indentationLevel : 0u;
                 uint indentation = lineIndentationLevel * lineIndentationPerLevel;
                 wrappedText.Append(' ', (int)indentation);
 
                 wrappedText.Append(inputText.Substring((int)lineRange.start, (int)lineRange.Length));
-                // TODO: Set MustBreakAfter on last item if CR LF.
-                //if (!breakpointOpportunities[lineRange.end - 1].MustBreakAfter)
-                //{
-                //    wrappedText.Append("\r\n");
-                //}
-                if (GetTokenCategory(inputText[(int)lineRange.end - 1]) != TokenCategory.LineBreak)
+
+                // Add an explicit line break if there isn't already one in the input.
+                if (!breakpointOpportunities[lineRange.end - 1].MustBreakAfter)
                 {
                     wrappedText.Append("\r\n");
                 }
             }
 
             return wrappedText.ToString();
+        }
+
+        public static string GetWrappedText(string inputText, uint maximumLineLength, uint lineIndentationPerLevel)
+        {
+            var breakpointOpportunities = AssignLineBreakpointOpportunities(inputText);
+            var lineRanges = GetLineRanges(inputText, breakpointOpportunities, maximumLineLength, lineIndentationPerLevel);
+            return GetWrappedText(inputText, breakpointOpportunities, lineRanges, lineIndentationPerLevel);
         }
     }
 }
