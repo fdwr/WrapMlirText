@@ -34,7 +34,7 @@
             this.textBoxInput = new System.Windows.Forms.TextBox();
             this.labelTokens = new System.Windows.Forms.Label();
             this.labelUnwrapped = new System.Windows.Forms.Label();
-            this.labelWrapped = new System.Windows.Forms.Label();
+            this.labelOutputText = new System.Windows.Forms.Label();
             this.textBoxTokens = new System.Windows.Forms.TextBox();
             this.labelInputText = new System.Windows.Forms.Label();
             this.textBoxRuler = new System.Windows.Forms.TextBox();
@@ -43,9 +43,9 @@
             this.textBoxBreakFlags = new System.Windows.Forms.TextBox();
             this.labelLineRanges = new System.Windows.Forms.Label();
             this.textBoxLineRanges = new System.Windows.Forms.TextBox();
-            this.label1 = new System.Windows.Forms.Label();
+            this.labelWrapWidth = new System.Windows.Forms.Label();
             this.textBoxWrapWidth = new System.Windows.Forms.TextBox();
-            this.label2 = new System.Windows.Forms.Label();
+            this.labelIndentSize = new System.Windows.Forms.Label();
             this.textBoxIndentSize = new System.Windows.Forms.TextBox();
             this.SuspendLayout();
             // 
@@ -89,36 +89,32 @@
             // labelTokens
             // 
             this.labelTokens.AutoSize = true;
-            this.labelTokens.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.labelTokens.Location = new System.Drawing.Point(8, 208);
             this.labelTokens.Name = "labelTokens";
-            this.labelTokens.Size = new System.Drawing.Size(53, 13);
+            this.labelTokens.Size = new System.Drawing.Size(45, 13);
             this.labelTokens.TabIndex = 2;
             this.labelTokens.Text = "&Tokens:";
             // 
             // labelUnwrapped
             // 
             this.labelUnwrapped.AutoSize = true;
-            this.labelUnwrapped.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.labelUnwrapped.Location = new System.Drawing.Point(8, 8);
             this.labelUnwrapped.Name = "labelUnwrapped";
             this.labelUnwrapped.Size = new System.Drawing.Size(75, 13);
             this.labelUnwrapped.TabIndex = 3;
             this.labelUnwrapped.Text = "Unwrapped:";
             // 
-            // labelWrapped
+            // labelOutputText
             // 
-            this.labelWrapped.AutoSize = true;
-            this.labelWrapped.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.labelWrapped.Location = new System.Drawing.Point(8, 400);
-            this.labelWrapped.Name = "labelWrapped";
-            this.labelWrapped.Size = new System.Drawing.Size(126, 13);
-            this.labelWrapped.TabIndex = 8;
-            this.labelWrapped.Text = "&Output text wrapped:";
+            this.labelOutputText.AutoSize = true;
+            this.labelOutputText.Location = new System.Drawing.Point(8, 400);
+            this.labelOutputText.Name = "labelOutputText";
+            this.labelOutputText.Size = new System.Drawing.Size(119, 13);
+            this.labelOutputText.TabIndex = 8;
+            this.labelOutputText.Text = "&Output text wrapped:";
             // 
             // textBoxTokens
             // 
-            this.textBoxTokens.Font = new System.Drawing.Font("Consolas", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.textBoxTokens.HideSelection = false;
             this.textBoxTokens.Location = new System.Drawing.Point(8, 224);
             this.textBoxTokens.Multiline = true;
@@ -133,10 +129,9 @@
             // labelInputText
             // 
             this.labelInputText.AutoSize = true;
-            this.labelInputText.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.labelInputText.Location = new System.Drawing.Point(8, 16);
             this.labelInputText.Name = "labelInputText";
-            this.labelInputText.Size = new System.Drawing.Size(65, 13);
+            this.labelInputText.Size = new System.Drawing.Size(60, 13);
             this.labelInputText.TabIndex = 0;
             this.labelInputText.Text = "&Input text:";
             // 
@@ -144,7 +139,7 @@
             // 
             this.textBoxRuler.BackColor = System.Drawing.SystemColors.Control;
             this.textBoxRuler.Enabled = false;
-            this.textBoxRuler.Font = new System.Drawing.Font("Consolas", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.textBoxRuler.Font = new System.Drawing.Font("Consolas", 8.25F);
             this.textBoxRuler.Location = new System.Drawing.Point(8, 416);
             this.textBoxRuler.Margin = new System.Windows.Forms.Padding(0);
             this.textBoxRuler.Multiline = true;
@@ -162,7 +157,7 @@
             this.checkBoxWrap.CheckState = System.Windows.Forms.CheckState.Checked;
             this.checkBoxWrap.Location = new System.Drawing.Point(80, 8);
             this.checkBoxWrap.Name = "checkBoxWrap";
-            this.checkBoxWrap.Size = new System.Drawing.Size(52, 16);
+            this.checkBoxWrap.Size = new System.Drawing.Size(64, 24);
             this.checkBoxWrap.TabIndex = 12;
             this.checkBoxWrap.Text = "Wra&p";
             this.checkBoxWrap.UseVisualStyleBackColor = true;
@@ -171,16 +166,14 @@
             // labelBreakFlags
             // 
             this.labelBreakFlags.AutoSize = true;
-            this.labelBreakFlags.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.labelBreakFlags.Location = new System.Drawing.Point(384, 208);
             this.labelBreakFlags.Name = "labelBreakFlags";
-            this.labelBreakFlags.Size = new System.Drawing.Size(75, 13);
+            this.labelBreakFlags.Size = new System.Drawing.Size(67, 13);
             this.labelBreakFlags.TabIndex = 4;
             this.labelBreakFlags.Text = "&Break flags:";
             // 
             // textBoxBreakFlags
             // 
-            this.textBoxBreakFlags.Font = new System.Drawing.Font("Consolas", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.textBoxBreakFlags.HideSelection = false;
             this.textBoxBreakFlags.Location = new System.Drawing.Point(384, 224);
             this.textBoxBreakFlags.Multiline = true;
@@ -195,16 +188,14 @@
             // labelLineRanges
             // 
             this.labelLineRanges.AutoSize = true;
-            this.labelLineRanges.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.labelLineRanges.Location = new System.Drawing.Point(688, 208);
             this.labelLineRanges.Name = "labelLineRanges";
-            this.labelLineRanges.Size = new System.Drawing.Size(77, 13);
+            this.labelLineRanges.Size = new System.Drawing.Size(69, 13);
             this.labelLineRanges.TabIndex = 6;
             this.labelLineRanges.Text = "&Line ranges:";
             // 
             // textBoxLineRanges
             // 
-            this.textBoxLineRanges.Font = new System.Drawing.Font("Consolas", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.textBoxLineRanges.HideSelection = false;
             this.textBoxLineRanges.Location = new System.Drawing.Point(688, 224);
             this.textBoxLineRanges.Multiline = true;
@@ -216,39 +207,36 @@
             this.textBoxLineRanges.Text = "(click the Wrap button)";
             this.textBoxLineRanges.WordWrap = false;
             // 
-            // label1
+            // labelWrapWidth
             // 
-            this.label1.AutoSize = true;
-            this.label1.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label1.Location = new System.Drawing.Point(152, 8);
-            this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(96, 13);
-            this.label1.TabIndex = 13;
-            this.label1.Text = "&Maximum width:";
+            this.labelWrapWidth.Location = new System.Drawing.Point(152, 8);
+            this.labelWrapWidth.Name = "labelWrapWidth";
+            this.labelWrapWidth.Size = new System.Drawing.Size(92, 13);
+            this.labelWrapWidth.TabIndex = 13;
+            this.labelWrapWidth.Text = "&Maximum width:";
             // 
             // textBoxWrapWidth
             // 
             this.textBoxWrapWidth.Location = new System.Drawing.Point(256, 8);
             this.textBoxWrapWidth.Name = "textBoxWrapWidth";
-            this.textBoxWrapWidth.Size = new System.Drawing.Size(100, 20);
+            this.textBoxWrapWidth.Size = new System.Drawing.Size(100, 22);
             this.textBoxWrapWidth.TabIndex = 14;
             this.textBoxWrapWidth.Text = "120";
             // 
-            // label2
+            // labelIndentSize
             // 
-            this.label2.AutoSize = true;
-            this.label2.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label2.Location = new System.Drawing.Point(368, 8);
-            this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(73, 13);
-            this.label2.TabIndex = 15;
-            this.label2.Text = "I&ndent size:";
+            this.labelIndentSize.AutoSize = true;
+            this.labelIndentSize.Location = new System.Drawing.Point(368, 8);
+            this.labelIndentSize.Name = "labelIndentSize";
+            this.labelIndentSize.Size = new System.Drawing.Size(66, 13);
+            this.labelIndentSize.TabIndex = 15;
+            this.labelIndentSize.Text = "I&ndent size:";
             // 
             // textBoxIndentSize
             // 
             this.textBoxIndentSize.Location = new System.Drawing.Point(448, 8);
             this.textBoxIndentSize.Name = "textBoxIndentSize";
-            this.textBoxIndentSize.Size = new System.Drawing.Size(100, 20);
+            this.textBoxIndentSize.Size = new System.Drawing.Size(100, 22);
             this.textBoxIndentSize.TabIndex = 16;
             this.textBoxIndentSize.Text = "4";
             // 
@@ -257,12 +245,12 @@
             this.AcceptButton = this.buttonWrap;
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.BackColor = System.Drawing.SystemColors.ControlDark;
+            this.BackColor = System.Drawing.SystemColors.ControlLight;
             this.ClientSize = new System.Drawing.Size(1016, 673);
             this.Controls.Add(this.textBoxIndentSize);
-            this.Controls.Add(this.label2);
+            this.Controls.Add(this.labelIndentSize);
             this.Controls.Add(this.textBoxWrapWidth);
-            this.Controls.Add(this.label1);
+            this.Controls.Add(this.labelWrapWidth);
             this.Controls.Add(this.textBoxLineRanges);
             this.Controls.Add(this.labelLineRanges);
             this.Controls.Add(this.textBoxBreakFlags);
@@ -271,11 +259,12 @@
             this.Controls.Add(this.textBoxRuler);
             this.Controls.Add(this.labelInputText);
             this.Controls.Add(this.textBoxTokens);
-            this.Controls.Add(this.labelWrapped);
+            this.Controls.Add(this.labelOutputText);
             this.Controls.Add(this.labelTokens);
             this.Controls.Add(this.buttonWrap);
             this.Controls.Add(this.textBoxOutput);
             this.Controls.Add(this.textBoxInput);
+            this.Font = new System.Drawing.Font("Segoe UI", 8.25F);
             this.Name = "formMain";
             this.Text = "MLIR Wrap Text";
             this.Load += new System.EventHandler(this.formMain_Load);
@@ -291,7 +280,7 @@
         private System.Windows.Forms.TextBox textBoxInput;
         private System.Windows.Forms.Label labelUnwrapped;
         private System.Windows.Forms.Label labelTokens;
-        private System.Windows.Forms.Label labelWrapped;
+        private System.Windows.Forms.Label labelOutputText;
         private System.Windows.Forms.TextBox textBoxTokens;
         private System.Windows.Forms.Label labelInputText;
         private System.Windows.Forms.TextBox textBoxRuler;
@@ -300,9 +289,9 @@
         private System.Windows.Forms.TextBox textBoxBreakFlags;
         private System.Windows.Forms.Label labelLineRanges;
         private System.Windows.Forms.TextBox textBoxLineRanges;
-        private System.Windows.Forms.Label label1;
+        private System.Windows.Forms.Label labelWrapWidth;
         private System.Windows.Forms.TextBox textBoxWrapWidth;
-        private System.Windows.Forms.Label label2;
+        private System.Windows.Forms.Label labelIndentSize;
         private System.Windows.Forms.TextBox textBoxIndentSize;
     }
 }

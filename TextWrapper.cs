@@ -9,7 +9,6 @@ namespace TextWrapper
 {
     using LboBf = TextWrapper.LineBreakpointOpportunity.BreakFlags;
 
-    // Stupid C#: error CS0116: A namespace cannot directly contain members such as fields, methods or statements
     static public class TextWrapper
     {
         public enum TokenCategory
@@ -137,7 +136,7 @@ namespace TextWrapper
         // Sigl,Idnt - no break between sigil punctuation and identifier
         // otherwise - can break anywhere else
         //
-        static LboBf[,] breakPairTable = new LboBf[,]
+        public static LboBf[,] mlirBreakPairTable = new LboBf[,]
         {
             //           None, Spac, Brek, Cmnt, Idnt, Open, Clos, Delm, Sigl, Othr, Nmbr, Strg,
             //                 ' '   CRLF  //    abc   ({[<   )}]> ,     #%!   +-*   123   "az"
@@ -162,7 +161,7 @@ namespace TextWrapper
         // Map current token category to breaking flags which apply to the entire token's character range,
         // such as IsOpening or IsInvisible.
         //
-        static LboBf[] categoryBreakFlags = new LboBf[]
+        public static LboBf[] mlirCategoryBreakFlags = new LboBf[]
         {
             //  None, Spac, Brek, Cmnt, Idnt, Open, Clos, Delm, Sigl, Othr, Nmbr, Strg,
             //        ' '   CRLF  //    abc   ({[<   )}]> ,     #%!   +-*   123   "az"
@@ -311,9 +310,14 @@ namespace TextWrapper
             }
         }
 
-        // Return an array of breakpoint opportunities for each code unit in the text.
-        // This stage is agnostic to maximum line wrap width, purely based on text properties and adjacent token pairs.
-        public static LineBreakpointOpportunity[] AssignLineBreakpointOpportunities(string inputText)
+        // Return an array of breakpoint opportunities and nesting levels for each code unit in the text,
+        // purely based on text properties and adjacent token pairs using the given tables.
+        // After this point, the original text is not needed anymore for deciding wrapping decisions.
+        public static LineBreakpointOpportunity[] AssignLineBreakpointOpportunities(
+            string inputText,
+            LboBf[,] breakPairTable,
+            LboBf[] categoryBreakFlags
+            )
         {
             var breakpointOpportunities = new LineBreakpointOpportunity[inputText.Length];
             if (inputText.Length == 0)
@@ -328,7 +332,7 @@ namespace TextWrapper
             LineBreakpointOpportunity dummyBreakpointOpportunity = new LineBreakpointOpportunity();
             ref LineBreakpointOpportunity previousBreakpointOpportunity = ref dummyBreakpointOpportunity;
 
-            // Read every pair of adjacent tokens, and assign breaking flags. e.g.
+            // Read every pair of adjacent tokens, assigning breaking flags. e.g.
             //
             //      sigil      x identifier = glue (no break)
             //      identifier x identifier = can break
@@ -360,7 +364,7 @@ namespace TextWrapper
                         // For '{','<','(', we want to split items onto separate lines if the list exceeds the maximum line length,
                         // but for '[' we want to keep them on the same line if possible since they often contain short lists of
                         // attributes or numbers.
-                        breakpointOpportunities[(int)currentTokenStartPosition].breakFlags |= LboBf.ShouldSplitItems;
+                        currentBreakOpportunityFlags |= LboBf.ShouldSplitItems;
                     }
                     delimiterStack.Add(openingClosingPairs[leadingChar]);
                     break;
@@ -406,6 +410,8 @@ namespace TextWrapper
             return breakpointOpportunities;
         }
 
+        // Split the given line index at the text position, returning true if the split happened
+        // or false if it's already split there (or out of bounds).
         static bool SplitLineRanges(List<LineRange> lineRanges, int lineIndex, uint breakPosition)
         {
             Debug.Assert(lineRanges != null);
@@ -472,6 +478,10 @@ namespace TextWrapper
         }
 
         // Collect all the ranges per line, splitting based on the maximum line length.
+        // The input text is not read at this point, just used to stitch together lines.
+        // Although the function itself is not recursive, it does use look-ahead of
+        // nested scopes at different levels which can be functionally equivalent to
+        // recursively breaking down the lines until they fit.
         public static List<LineRange> GetLineRanges(
             string inputText,
             LineBreakpointOpportunity[] breakpointOpportunities,
@@ -484,7 +494,8 @@ namespace TextWrapper
             var lineRanges = new List<LineRange>();
             lineRanges.Add(new LineRange(0, (uint)inputText.Length));
 
-            // Find the best breakpoint in every line, splitting once found.
+            // Find the best breakpoint in every line, splitting once found
+            // increasing the total line count.
             for (int lineIndex = 0; lineIndex < lineRanges.Count; ++lineIndex)
             {
                 LineRange lineRange = lineRanges[lineIndex];
@@ -501,14 +512,14 @@ namespace TextWrapper
                 uint breakPosition = lineRange.start; // Actual break position to split.
                 uint candidateBreakPosition = lineRange.start; // Best candidate so far.
                 uint firstIndentationLevel = breakpointOpportunities[(int)lineRange.start].indentationLevel;
-                uint minimumIndentationLevel = firstIndentationLevel;
+                uint minimumIndentationLevel = firstIndentationLevel; // Lowest level found on line.
                 uint indentation = firstIndentationLevel * lineIndentationPerLevel;
                 uint lineLength = indentation;
 
                 // Find the rightmost breakpoint candidate position that fits within the maximum line length.
                 for (uint textPosition = lineRange.start; textPosition < lineRange.end; /*increment in loop*/)
                 {
-                    var opportunity = breakpointOpportunities[(int)textPosition++];
+                    var breakpointOpportunity = breakpointOpportunities[(int)textPosition++];
                     ++lineLength;
 
                     // Break immediately if a hard line break, regardless of line width.
@@ -516,7 +527,7 @@ namespace TextWrapper
                     //      "Hello world{CR}{LF}My name is Inigo..."
                     //                         /\ <---- Break after LF (not CR).
                     //
-                    if (opportunity.MustBreakAfter)
+                    if (breakpointOpportunity.MustBreakAfter)
                     {
                         breakPosition = textPosition;
                         break;
@@ -529,25 +540,26 @@ namespace TextWrapper
                     //      "Hello there world. My name is Inigo..."
                     //                  /\    | <---- Exit loop after "world", but keep earlier candidate breakpoint after "there ".
                     //
-                    if (lineLength > maximumLineLength && candidateBreakPosition > lineRange.start && !opportunity.IsInvisible)
+                    if (lineLength > maximumLineLength && candidateBreakPosition > lineRange.start && !breakpointOpportunity.IsInvisible)
                     {
                         breakPosition = candidateBreakPosition;
                         break;
                     }
 
-                    // Look for candidate breakpoints at the right nesting level.
-                    // Skip over any breaks that are within a more deeply nested delimiter,
-                    // and any dips in levels become the new minimum level.
-                    //
-                    // e.g. [-------------]
-                    //      "Hello (there dear) world"
-                    //            /\<---- Skip over "there dear", keeping "Hello " as candidate breakpoint since it's at the right level.
-                    //
-                    if (opportunity.indentationLevel < minimumIndentationLevel)
+                    // Record any level dips (e.g. ") : (" has a dip at the colon) for potential item splitting later.
+                    if (breakpointOpportunity.indentationLevel < minimumIndentationLevel)
                     {
-                        minimumIndentationLevel = opportunity.indentationLevel;
+                        minimumIndentationLevel = breakpointOpportunity.indentationLevel;
                     }
-                    if (opportunity.indentationLevel == minimumIndentationLevel && opportunity.CanBreakAfter)
+
+                    // Look for candidate breakpoints at the right nesting level, skipping over any breaks that are
+                    // within a more deeply nested scope.
+                    //
+                    // e.g. [--------------]
+                    //      "Hello (there dear) world"
+                    //            /\ <---- Skip over "there dear", keeping "Hello " as candidate breakpoint since it's at the right level.
+                    //
+                    if (breakpointOpportunity.indentationLevel == minimumIndentationLevel && breakpointOpportunity.CanBreakAfter)
                     {
                         // Record this candidate break, but continue looking for a potentially later one.
                         candidateBreakPosition = textPosition;
@@ -568,14 +580,28 @@ namespace TextWrapper
                 // Split items inside level changes due to opening/closing puncuation.
                 if (breakPosition > 0 &&
                     breakPosition < breakpointOpportunities.Length &&
-                    (breakpointOpportunities[(int)breakPosition].indentationLevel > minimumIndentationLevel ||
-                    breakpointOpportunities[(int)breakPosition - 1].indentationLevel > minimumIndentationLevel))
+                    breakpointOpportunities[(int)breakPosition].indentationLevel > minimumIndentationLevel)
                 {
                     SplitOpeningClosingDelimiters(breakpointOpportunities, lineRanges, lineIndex, breakPosition, minimumIndentationLevel);
+                    AdvanceLineIndexToTextPosition(lineRanges, ref lineIndex, breakPosition - 1);
                 }
             }
 
             return lineRanges;
+        }
+
+        private static void AdvanceLineIndexToTextPosition(
+            List<LineRange> lineRanges,
+            ref int lineIndex,
+            uint textPosition
+            )
+        {
+            int updatedLineIndex = lineIndex;
+            while (updatedLineIndex < lineRanges.Count && textPosition >= lineRanges[updatedLineIndex].end)
+            {
+                ++updatedLineIndex;
+            }
+            lineIndex = updatedLineIndex;
         }
 
         // Split the opening/closing dividers and potentially all subitems separated by commas. e.g.
@@ -588,101 +614,116 @@ namespace TextWrapper
             List<LineRange> lineRanges,
             int lineIndex,
             uint breakPosition,
-            uint minimumIndentationLevel
+            uint outerIndentationLevel
             )
         {
             LineRange lineRange = lineRanges[lineIndex];
+            uint nestedIndentationLevel = outerIndentationLevel + 1; // Level of content within the {content}.
 
-            // Look backward for the opening punctuation to see if is flagged as wanting items to be split. e.g.
+            // Look backward for the opening punctuation to find its text position range and see if is flagged as wanting
+            // its items to be split. e.g.
+            //
+            //      {-# dialect_resources ... #-}
+            //     /\ /\ <---- before/after range
             //
             //      config<capabilities = {}, subconfig = {}, alignment = {}>
-            //            |<---- Yes, flag says to split items (each comma separated key value pair).
+            //            | <---- Yes, flag says to split items (each comma separated key value pair).
             //
             //      values = [1,2,3,4,5,6,7,8,9,10]
-            //               |<---- No, retain items because splitting every value would consume many lines.
+            //               | <---- No, retain items because splitting every value would consume many lines.
             //
             bool shouldSplitDelimitedItems = false;
+            uint breakPositionBeforeOpening = breakPosition;
+            uint breakPositionAfterOpening = breakPosition;
+
             for (uint textPosition = breakPosition; textPosition-- > lineRange.start; )
             {
                 var breakpoint = breakpointOpportunities[(int)textPosition];
-                if (!breakpoint.IsOpening || breakpoint.indentationLevel != minimumIndentationLevel)
+                if (breakpoint.indentationLevel >= nestedIndentationLevel)
                 {
-                    continue; // Keep looking for the opening punctuation at the right level.
+                    breakPositionAfterOpening = textPosition; // Still haven't reached opening punctuation.
                 }
-                shouldSplitDelimitedItems = breakpoint.ShouldSplitItems;
+                else if (breakpoint.IsOpening)
+                {
+                    shouldSplitDelimitedItems |= breakpoint.ShouldSplitItems;
+                    breakPositionBeforeOpening = textPosition;
+                }
+                else // Went before the opening punctuation.
+                {
+                    break;
+                }
+            }
 
-                // Break before certain opening punctuation. e.g.
-                //
-                //      someScope { someText moreLongTextHere }.
-                //               /\ <---- Yes, break before curly braces.
-                //
-                //      function(parameterOne, parameterTwo)
-                //             /\ <---- No, keep parentheses on same line as call.
-                //
-                // TODO: Check with {-# #-}
-                if (textPosition > 0 &&
-                    breakpointOpportunities[(int)textPosition - 1].ShouldBreakAfter &&
-                    !IsLineBreakAdjacent(breakpointOpportunities, textPosition, LookDirection.Backward))
-                {
-                    if (SplitLineRanges(lineRanges, lineIndex, textPosition))
-                    {
-                        ++lineIndex;
-                    }
-                }
-                // Break after the opening punctuation.
-                //
-                //      someScope { someText moreLongTextHere }
-                //                /\ <---- Break after curly braces to separate statements.
-                //
-                //      function(parameterOne, parameterTwo)
-                //              /\ <---- Break after parentheses to separate parameters.
-                //
-                // TODO: Check with {-# #-}
-                if (!IsLineBreakAdjacent(breakpointOpportunities, textPosition + 1, LookDirection.Forward))
-                {
-                    SplitLineRanges(lineRanges, lineIndex, textPosition + 1);
-                }
+            // Break before certain opening punctuation. e.g.
+            //
+            //      someScope { someText moreLongTextHere }.
+            //               /\ <---- Yes, break before curly braces.
+            //
+            //      function(parameterOne, parameterTwo)
+            //             /\ <---- No, keep parentheses on same line as call.
+            //
+            if (breakPositionBeforeOpening > lineRange.start &&
+                breakpointOpportunities[(int)breakPositionBeforeOpening - 1].ShouldBreakAfter &&
+                !IsLineBreakAdjacent(breakpointOpportunities, breakPositionBeforeOpening, LookDirection.Backward))
+            {
+                AdvanceLineIndexToTextPosition(lineRanges, ref lineIndex, breakPositionBeforeOpening);
+                SplitLineRanges(lineRanges, lineIndex, breakPositionBeforeOpening);
+            }
 
-                break;
+            // Break after the opening punctuation.
+            //
+            //      someScope { someText moreLongTextHere }
+            //                /\ <---- Break after curly braces to separate statements.
+            //
+            //      function(parameterOne, parameterTwo)
+            //              /\ <---- Break after parentheses to separate parameters.
+            //
+            if (!IsLineBreakAdjacent(breakpointOpportunities, breakPositionAfterOpening, LookDirection.Forward))
+            {
+                AdvanceLineIndexToTextPosition(lineRanges, ref lineIndex, breakPositionAfterOpening);
+                SplitLineRanges(lineRanges, lineIndex, breakPositionAfterOpening);
             }
 
             // Scan forward to split the closing punctuation and potentially split any delimited items within the scope
             // that are at the same nesting level.
-            for (int nextLineIndex = lineIndex + 1; nextLineIndex < lineRanges.Count; ++nextLineIndex)
-            {
-                LineRange nextLineRange = lineRanges[nextLineIndex];
-                for (uint textPosition = nextLineRange.start; textPosition < nextLineRange.end; textPosition++)
-                {
-                    // Break before closing punctuation, unless there's already a line break. e.g.
-                    //
-                    //      someScope { someText moreLongTextHere }
-                    //                                           /\ <---- Break before closing punctuation.
-                    var opportunity = breakpointOpportunities[(int)textPosition];
-                    if (opportunity.indentationLevel <= minimumIndentationLevel)
-                    {
-                        if (!IsLineBreakAdjacent(breakpointOpportunities, textPosition, LookDirection.Backward))
-                        {
-                            SplitLineRanges(lineRanges, nextLineIndex, textPosition);
-                        }
-                        break; // Exited the nested scope, such as after ] } ) >.
-                    }
+            uint breakpointOpportunitiesLength = (uint)breakpointOpportunities.Length;
+            uint breakPositionBeforeClosing = breakpointOpportunitiesLength;
 
-                    // Split after each delimited item at the same nesting level, not subitems. e.g.
-                    //
-                    //      config<capabilities = {}, subconfig = {}, alignment = {}, key = value>
-                    //                              /\              /\              /\
-                    uint delimiterBreakPosition = textPosition + 1;
-                    if (
-                        shouldSplitDelimitedItems &&
-                        opportunity.indentationLevel == minimumIndentationLevel + 1 &&
-                        opportunity.CanSplitAfter &&
-                        !IsLineBreakAdjacent(breakpointOpportunities, delimiterBreakPosition, LookDirection.Forward)
-                        )
-                    {
-                        SplitLineRanges(lineRanges, nextLineIndex, delimiterBreakPosition);
-                    }
-                } // for textPosition
-            } // for nextLineIndex
+            for (uint textPosition = breakPositionAfterOpening; textPosition < breakpointOpportunitiesLength; ++textPosition)
+            {
+                var breakpointOpportunity = breakpointOpportunities[(int)textPosition];
+
+                // Check for exiting the nested scope, such at the ] } ) >.
+                if (breakpointOpportunity.indentationLevel < nestedIndentationLevel)
+                {
+                    breakPositionBeforeClosing = textPosition;
+                    break;
+                }
+
+                // Split after each delimited item at the same nesting level, not subitems. e.g.
+                //
+                //      config<capabilities = {}, subconfig = {}, alignment = {}, key = value>
+                //                              /\              /\              /\
+                uint delimiterBreakPosition = textPosition + 1;
+                if (shouldSplitDelimitedItems &&
+                    breakpointOpportunity.indentationLevel == nestedIndentationLevel &&
+                    breakpointOpportunity.CanSplitAfter &&
+                    !IsLineBreakAdjacent(breakpointOpportunities, delimiterBreakPosition, LookDirection.Forward))
+                {
+                    AdvanceLineIndexToTextPosition(lineRanges, ref lineIndex, delimiterBreakPosition);
+                    SplitLineRanges(lineRanges, lineIndex, delimiterBreakPosition);
+                }
+            }
+
+            // Break before closing punctuation, unless there's already a line break. e.g.
+            //
+            //      someScope { someText moreLongTextHere }
+            //                                           /\ <---- Break before closing punctuation.
+            if (!IsLineBreakAdjacent(breakpointOpportunities, breakPositionBeforeClosing, LookDirection.Backward))
+            {
+                AdvanceLineIndexToTextPosition(lineRanges, ref lineIndex, breakPositionBeforeClosing);
+                SplitLineRanges(lineRanges, lineIndex, breakPositionBeforeClosing);
+            }
         }
 
         // Concatenate the line ranges together, inserting indentation and additional line breaks as needed.

@@ -62,7 +62,7 @@ namespace WrapMlirText
             uint maximumLineLength = MaximumLineLength;
             uint lineIndentationPerLevel = LineIndentationPerLevel;
 
-            var breakpointOpportunities = AssignLineBreakpointOpportunities(inputText);
+            var breakpointOpportunities = AssignLineBreakpointOpportunities(inputText, mlirBreakPairTable, mlirCategoryBreakFlags);
             var lineRanges = GetLineRanges(inputText, breakpointOpportunities, maximumLineLength, lineIndentationPerLevel);
 
             string tokensText = GetTokensText(inputText);
@@ -113,12 +113,12 @@ namespace WrapMlirText
                 uint previousTextPosition = textPosition;
                 TokenCategory category = ReadNextTokenCategory(inputText, ref textPosition);
                 tokensText.Append(category.ToString());
-                tokensText.Append(":\t");
+                tokensText.Append(":\t\"");
                 if (category != TokenCategory.LineBreak)
                 {
                     tokensText.Append(inputText.Substring((int)previousTextPosition, (int)(textPosition - previousTextPosition)));
                 }
-                tokensText.Append("\r\n");
+                tokensText.Append("\"\r\n");
             }
             return tokensText.ToString();
         }
@@ -151,7 +151,7 @@ namespace WrapMlirText
                     lineText = lineText.Remove((int)lineText.Length - 2);
                 }
                 var indentationLevel = (lineRange.start < breakpointOpportunities.Length) ? breakpointOpportunities[(int)lineRange.start].indentationLevel : 0;
-                lineRangesText.Append($"@{lineRange.start}..{lineRange.end} x{lineRange.Length} L{indentationLevel}\t{lineText}\r\n");
+                lineRangesText.Append($"@{lineRange.start}..{lineRange.end} x{lineRange.Length} L{indentationLevel}\t\"{lineText}\"\r\n");
             }
             return lineRangesText.ToString();
         }
