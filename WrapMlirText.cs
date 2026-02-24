@@ -62,7 +62,7 @@ namespace WrapMlirText
             uint maximumLineLength = MaximumLineLength;
             uint lineIndentationPerLevel = LineIndentationPerLevel;
 
-            var breakpointOpportunities = AssignLineBreakpointOpportunities(inputText, breakPairTable, categoryBreakFlags);
+            var breakpointOpportunities = GetLineBreakpointOpportunities(inputText, breakPairTable, categoryBreakFlags);
             var lineRanges = GetLineRanges(inputText, breakpointOpportunities, maximumLineLength, lineIndentationPerLevel);
 
             string tokensText = GetTokensText(inputText);

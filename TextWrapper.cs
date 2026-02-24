@@ -5,6 +5,29 @@ using System.Linq;
 using System.Text;
 using System.Diagnostics;
 
+// This text wrapping logic is tailored for wrapping code (particularly the curly brace families), which differs from
+// natural language breaking rules (like those in UAX #14 (https://www.unicode.org/reports/tr14/) as programming
+// languages have special considerations like multicharacter tokens (e.g. "->" is an unbreakable token) and nested
+// scopes and indentation. The overall process is:
+//
+// 1. Tokenize the input text and ranges of token categories (e.g. whitespace, line break, identifier, punctuation, etc.).
+// 2. Assign breakpoint opportunities based on token properties and adjacent token pairs.
+// 3. Wrap text into line ranges based on width and breakpoint opportunities, with some special handling for nested scopes.
+//
+// Caveats:
+// - This limited tokenizer doesn't do full parsing with symbol lookup, and so ambiguous grammars like C++ that
+//   overload {'<','>','>>'} to do completely different jobs depending on previous definitions (a greater/lesser than
+//   vs template parameters) are too complex to be reliable, but it works well for MLIR.
+// - The table below is limited to ASCII characters, with non-ASCII characters treated as inseparable identifiers, but
+//   that covers the common cases for programming languages and is actually desireable anyway, as you don't want to
+//   break identifiers where it's normally acceptable in natural language to do so, such as between Chinese ideographs.
+// - Accordingly this logic doesn't handle decomposed forms of Latin characters with diacritics which would make lines
+//   graphically shorter than their code unit width, but in practice, IME's insert normalized precomposed forms anyway.
+// - Fallback fonts are not considered, meaning Chinese ideographs could yield graphically wider lines than the
+//   equivalent number of Latin characters, but this is not simply a matter of using double-wide width for ideographs,
+//   as the fallback font has a non-integral width relative to the base font characters. So it would require a callback
+//   to get the glyph advances or return the number of code units that fit within a given pixel/DIP line length.
+
 namespace TextWrapper
 {
     using LboBf = TextWrapper.LineBreakpointOpportunity.BreakFlags;
@@ -99,7 +122,7 @@ namespace TextWrapper
         // 0x10 - 0x1F  DLE   DC1   DC2   DC3   DC4   NAK   SYN   ETB   CAN   EM    SUB   ESC   FS    GS    RS    US
                         None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None,
         // 0x20 - 0x2F  Sp    !     "     #     $     %     &     '     (     )     *     +     ,   -     .     / 
-                        Spac, Sigl, Strg, Sigl, Sigl, Sigl, Othr, Othr, Open, Clos, Othr, Othr, Delm, Othr, Idnt, Cmnt,
+                        Spac, Sigl, Strg, Sigl, Idnt, Sigl, Othr, Othr, Open, Clos, Othr, Othr, Delm, Othr, Idnt, Cmnt,
         // 0x30 - 0x3F  0     1     2     3     4     5     6     7     8     9     :     ;     <     =     >     ?
                         Nmbr, Nmbr, Nmbr, Nmbr, Nmbr, Nmbr, Nmbr, Nmbr, Nmbr, Nmbr, Othr, Delm, Open, Othr, Clos, Othr,
         // 0x40 - 0x4F  @     A     B     C     D     E     F     G     H     I     J     K     L     M     N     O
@@ -310,10 +333,19 @@ namespace TextWrapper
             }
         }
 
+        // Moves the text position to the end of any whitespace, meaning the first character afterward, or to the end
+        // of the text if no more explicit line breaks are found.
+        public static void SeekAfterWhitespace(LineBreakpointOpportunity[] breakpointOpportunities, ref uint textPosition)
+        {
+            for (; textPosition < breakpointOpportunities.Length && breakpointOpportunities[(int)textPosition].IsInvisible; ++textPosition)
+            {
+            }
+        }
+
         // Return an array of breakpoint opportunities and nesting levels for each code unit in the text,
         // purely based on text properties and adjacent token pairs using the given tables.
         // After this point, the original text is not needed anymore for deciding wrapping decisions.
-        public static LineBreakpointOpportunity[] AssignLineBreakpointOpportunities(
+        public static LineBreakpointOpportunity[] GetLineBreakpointOpportunities(
             string inputText,
             LboBf[,] breakPairTable,
             LboBf[] categoryBreakFlags
@@ -374,6 +406,10 @@ namespace TextWrapper
                     // Well formed text should always match on the first try, but we can be resilient to malformed text
                     // by allowing mismatches and just popping until we find a match or run out of stack.
                     char trailingChar = inputText[(int)currentTokenLastPosition];
+                    //if (trailingChar == '}')
+                    //{
+                    //    previousBreakpointOpportunity.breakFlags |= LboBf.ShouldBreakAfter | LboBf.CanBreakAfter;
+                    //}
                     while (delimiterStack.Count > 0)
                     {
                         char closingDelimiter = delimiterStack[delimiterStack.Count - 1];
@@ -578,9 +614,11 @@ namespace TextWrapper
                 }
 
                 // Split items inside level changes due to opening/closing puncuation.
+                // This scans ahead until the end of the level, updating the total line count.
                 if (breakPosition > 0 &&
                     breakPosition < breakpointOpportunities.Length &&
-                    breakpointOpportunities[(int)breakPosition].indentationLevel > minimumIndentationLevel)
+                    (breakpointOpportunities[(int)breakPosition - 1].indentationLevel > minimumIndentationLevel ||
+                     breakpointOpportunities[(int)breakPosition].indentationLevel > minimumIndentationLevel))
                 {
                     SplitOpeningClosingDelimiters(breakpointOpportunities, lineRanges, lineIndex, breakPosition, minimumIndentationLevel);
                     AdvanceLineIndexToTextPosition(lineRanges, ref lineIndex, breakPosition - 1);
@@ -680,6 +718,7 @@ namespace TextWrapper
             //
             if (!IsLineBreakAdjacent(breakpointOpportunities, breakPositionAfterOpening, LookDirection.Forward))
             {
+                SeekAfterWhitespace(breakpointOpportunities, ref breakPositionAfterOpening);
                 AdvanceLineIndexToTextPosition(lineRanges, ref lineIndex, breakPositionAfterOpening);
                 SplitLineRanges(lineRanges, lineIndex, breakPositionAfterOpening);
             }
@@ -710,6 +749,7 @@ namespace TextWrapper
                     breakpointOpportunity.CanSplitAfter &&
                     !IsLineBreakAdjacent(breakpointOpportunities, delimiterBreakPosition, LookDirection.Forward))
                 {
+                    SeekAfterWhitespace(breakpointOpportunities, ref delimiterBreakPosition);
                     AdvanceLineIndexToTextPosition(lineRanges, ref lineIndex, delimiterBreakPosition);
                     SplitLineRanges(lineRanges, lineIndex, delimiterBreakPosition);
                 }
@@ -719,7 +759,8 @@ namespace TextWrapper
             //
             //      someScope { someText moreLongTextHere }
             //                                           /\ <---- Break before closing punctuation.
-            if (!IsLineBreakAdjacent(breakpointOpportunities, breakPositionBeforeClosing, LookDirection.Backward))
+            if (breakPositionBeforeClosing < breakpointOpportunitiesLength &&
+                !IsLineBreakAdjacent(breakpointOpportunities, breakPositionBeforeClosing, LookDirection.Backward))
             {
                 AdvanceLineIndexToTextPosition(lineRanges, ref lineIndex, breakPositionBeforeClosing);
                 SplitLineRanges(lineRanges, lineIndex, breakPositionBeforeClosing);

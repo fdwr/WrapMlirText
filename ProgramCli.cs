@@ -60,7 +60,7 @@ namespace WrapMlirText
                 return;
             }
 
-            var lineBreakpointOpportunities = AssignLineBreakpointOpportunities(inputText, breakPairTable, categoryBreakFlags);
+            var lineBreakpointOpportunities = GetLineBreakpointOpportunities(inputText, breakPairTable, categoryBreakFlags);
             var lineRanges = GetLineRanges(inputText, lineBreakpointOpportunities, maximumLineLength, lineIndentationPerLevel);
             outputText = GetWrappedText(inputText, lineBreakpointOpportunities, lineRanges, lineIndentationPerLevel);
 
