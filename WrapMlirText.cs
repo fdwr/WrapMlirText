@@ -21,7 +21,7 @@ namespace WrapMlirText
         const int UISF_HIDEACCEL = 0x2;
         const int UIS_CLEAR = 0x2;
 
-        public uint TryParseWithDefault(string s, uint defaultValue) { return uint.TryParse(s, out uint value) ? value : defaultValue; }
+        public static uint TryParseWithDefault(string s, uint defaultValue) { return uint.TryParse(s, out uint value) ? value : defaultValue; }
         public uint MaximumLineLength => TryParseWithDefault(textBoxWrapWidth.Text, 120);
         public uint LineIndentationPerLevel => TryParseWithDefault(textBoxIndentSize.Text, 4);
 
