@@ -15,15 +15,33 @@ namespace WrapMlirText
 {
     public partial class formMain : Form
     {
+        // P/Invoke constants for Win32 messages
+        private const int WM_UPDATEUISTATE = 0x0128;
+        private const int UISF_HIDEACCEL = 0x2;
+        private const int UIS_CLEAR = 0x2;
+        private const int EM_SETTABSTOPS = 0x00CB;
+
+        // UI configuration constants
+        private const int TokensTabWidth = 20;
+        private const int LineRangesTabWidth = 20;
+        private const uint DefaultMaximumLineLength = 120;
+        private const uint DefaultLineIndentationPerLevel = 4;
+
+        public struct LineRangeAndTokenCategory
+        {
+            public LineRange lineRange;
+            public TokenCategory tokenCategory;
+        }
+
+        private List<LineRangeAndTokenCategory> tokenRanges = new List<LineRangeAndTokenCategory>();
+        private List<LineRange> lineRanges = new List<LineRange>();
+
         [DllImport("User32.dll", CharSet = CharSet.Unicode)]
         public static extern IntPtr SendMessage(System.IntPtr windowHandle, int messageCode, int wParam, int[] lParam);
-        const int WM_UPDATEUISTATE = 0x0128;
-        const int UISF_HIDEACCEL = 0x2;
-        const int UIS_CLEAR = 0x2;
 
         public static uint TryParseWithDefault(string s, uint defaultValue) { return uint.TryParse(s, out uint value) ? value : defaultValue; }
-        public uint MaximumLineLength => TryParseWithDefault(textBoxWrapWidth.Text, 120);
-        public uint LineIndentationPerLevel => TryParseWithDefault(textBoxIndentSize.Text, 4);
+        public uint MaximumLineLength => TryParseWithDefault(textBoxWrapWidth.Text, DefaultMaximumLineLength);
+        public uint LineIndentationPerLevel => TryParseWithDefault(textBoxIndentSize.Text, DefaultLineIndentationPerLevel);
 
         protected override void WndProc(ref Message m)
         {
@@ -38,22 +56,18 @@ namespace WrapMlirText
         public formMain()
         {
             InitializeComponent();
-            SetTabWidth(this.textBoxTokens, 24);
-            SetTabWidth(this.textBoxLineRanges, 20);
+            SetTabWidths(this.textBoxTokens, new int[] { 12 * 4, 32 * 4 });
+            SetTabWidths(this.textBoxBreakFlags, new int[] { 8 * 4, 12 * 4, 16 * 4 });
+            SetTabWidths(this.textBoxLineRanges, new int[] { 12 * 4, 16 * 4, 20 * 4 });
         }
 
         private void formMain_Load(object sender, EventArgs e)
         {
-            textBoxInput.SelectionStart = 0;
-            textBoxInput.SelectionLength = 0;
-            textBoxTokens.SelectionStart = 0;
-            textBoxTokens.SelectionLength = 0;
-            textBoxOutput.SelectionStart = 0;
-            textBoxOutput.SelectionLength = 0;
-            textBoxBreakFlags.SelectionStart = 0;
-            textBoxBreakFlags.SelectionLength = 0;
-            textBoxLineRanges.SelectionStart = 0;
-            textBoxLineRanges.SelectionLength = 0;
+            ClearTextBoxSelection(textBoxInput);
+            ClearTextBoxSelection(textBoxTokens);
+            ClearTextBoxSelection(textBoxOutput);
+            ClearTextBoxSelection(textBoxBreakFlags);
+            ClearTextBoxSelection(textBoxLineRanges);
         }
 
         private void buttonWrap_Click(object sender, EventArgs e)
@@ -62,32 +76,35 @@ namespace WrapMlirText
             uint maximumLineLength = MaximumLineLength;
             uint lineIndentationPerLevel = LineIndentationPerLevel;
 
-            var breakpointOpportunities = GetLineBreakpointOpportunities(inputText, breakPairTable, categoryBreakFlags);
-            var lineRanges = GetLineRanges(inputText, breakpointOpportunities, maximumLineLength, lineIndentationPerLevel);
+            var breakpointOpportunities = GetLineBreakpointOpportunities(inputText, defaultBreakPairTable, defaultCategoryBreakFlags);
+            lineRanges = GetLineRanges(inputText, breakpointOpportunities, maximumLineLength, lineIndentationPerLevel);
+            tokenRanges = GetTokenRanges(inputText);
 
-            string tokensText = GetTokensText(inputText);
-            textBoxTokens.Text = tokensText;
-            textBoxTokens.SelectionStart = 0; // For some reason, setting the text also selects all the text. So clear it.
-            textBoxTokens.SelectionLength = 0;
-            string breakFlagsText = GetBreakFlagsText(inputText, breakpointOpportunities);
-            textBoxBreakFlags.Text = breakFlagsText;
-            textBoxBreakFlags.SelectionStart = 0;
-            textBoxBreakFlags.SelectionLength = 0;
-            string lineRangesText = GetLineRangesText(inputText, breakpointOpportunities, lineRanges, LineIndentationPerLevel);
-            textBoxLineRanges.Text = lineRangesText;
-            textBoxLineRanges.SelectionStart = 0;
-            textBoxLineRanges.SelectionLength = 0;
-            string wrappedText = GetWrappedText(inputText, breakpointOpportunities, lineRanges, LineIndentationPerLevel);
-            textBoxOutput.Text = wrappedText;
-            textBoxOutput.SelectionStart = 0;
-            textBoxOutput.SelectionLength = 0;
+            textBoxTokens.Text = GetTokensText(inputText, tokenRanges);
+            textBoxBreakFlags.Text = GetBreakFlagsText(inputText, breakpointOpportunities);
+            textBoxLineRanges.Text = GetLineRangesText(inputText, breakpointOpportunities, lineRanges, LineIndentationPerLevel);
+            textBoxOutput.Text = GetWrappedText(inputText, breakpointOpportunities, lineRanges, LineIndentationPerLevel);
+
+            ClearTextBoxSelection(textBoxTokens);
+            ClearTextBoxSelection(textBoxBreakFlags);
+            ClearTextBoxSelection(textBoxLineRanges);
+            ClearTextBoxSelection(textBoxOutput);
         }
 
-        private const int EM_SETTABSTOPS = 0x00CB;
-
-        public void SetTabWidth(System.Windows.Forms.TextBox textbox, int tabWidth)
+        private static void ClearTextBoxSelection(TextBox textBox)
         {
-            SendMessage(textbox.Handle, EM_SETTABSTOPS, 1, new int[] { tabWidth * 4 });
+            textBox.SelectionStart = 0;
+            textBox.SelectionLength = 0;
+        }
+
+        public void SetTabWidth(System.Windows.Forms.TextBox textBox, int tabWidth)
+        {
+            SetTabWidths(textBox, new int[] { tabWidth * 4 });
+        }
+
+        public void SetTabWidths(System.Windows.Forms.TextBox textBox, int[] tabWidths)
+        {
+            SendMessage(textBox.Handle, EM_SETTABSTOPS, tabWidths.Length, tabWidths);
         }
 
         private void checkBoxWrap_CheckedChanged(object sender, EventArgs e)
@@ -104,19 +121,31 @@ namespace WrapMlirText
             }
         }
 
-        public static string GetTokensText(string inputText)
+        public static List<LineRangeAndTokenCategory> GetTokenRanges(string inputText)
         {
-            var tokensText = new StringBuilder();
+            List<LineRangeAndTokenCategory> tokenRanges = new List<LineRangeAndTokenCategory>();
 
             for (uint textPosition = 0; textPosition < inputText.Length;)
             {
                 uint previousTextPosition = textPosition;
                 TokenCategory category = ReadNextTokenCategory(inputText, ref textPosition);
-                tokensText.Append(category.ToString());
+                tokenRanges.Add(new LineRangeAndTokenCategory { lineRange = new LineRange { start = previousTextPosition, end = textPosition }, tokenCategory = category });
+            }
+            return tokenRanges;
+        }
+
+        public static string GetTokensText(string inputText, List<LineRangeAndTokenCategory> tokenRanges)
+        {
+            var tokensText = new StringBuilder();
+
+            foreach (var tokenRange in tokenRanges)
+            {
+                tokensText.Append($"[{tokenRange.lineRange.start}..{tokenRange.lineRange.end})\t");
+                tokensText.Append(tokenRange.tokenCategory.ToString());
                 tokensText.Append(":\t\"");
-                if (category != TokenCategory.LineBreak)
+                if (tokenRange.tokenCategory != TokenCategory.LineBreak)
                 {
-                    tokensText.Append(inputText.Substring((int)previousTextPosition, (int)(textPosition - previousTextPosition)));
+                    tokensText.Append(inputText.Substring((int)tokenRange.lineRange.start, (int)(tokenRange.lineRange.Length)));
                 }
                 tokensText.Append("\"\r\n");
             }
@@ -151,9 +180,36 @@ namespace WrapMlirText
                     lineText = lineText.Remove((int)lineText.Length - 2);
                 }
                 var indentationLevel = (lineRange.start < breakpointOpportunities.Length) ? breakpointOpportunities[(int)lineRange.start].indentationLevel : 0;
-                lineRangesText.Append($"@{lineRange.start}..{lineRange.end} x{lineRange.Length} L{indentationLevel}\t\"{lineText}\"\r\n");
+                lineRangesText.Append($"[{lineRange.start}..{lineRange.end})\tx{lineRange.Length}\tL{indentationLevel}\t\"{lineText}\"\r\n");
             }
             return lineRangesText.ToString();
+        }
+
+        private void SelectInputTextRange(uint start, uint length)
+        {
+            textBoxInput.SelectionStart = (int)start;
+            textBoxInput.SelectionLength = (int)length;
+            textBoxInput.ScrollToCaret();
+        }
+
+        private void textBoxBreakFlags_Clicked(object sender, EventArgs e)
+        {
+            int lineIndex = textBoxBreakFlags.GetLineFromCharIndex(textBoxBreakFlags.SelectionStart);
+            SelectInputTextRange((uint)lineIndex, 1);
+        }
+
+        private void textBoxTokens_Clicked(object sender, EventArgs e)
+        {
+            int lineIndex = textBoxTokens.GetLineFromCharIndex(textBoxTokens.SelectionStart);
+            var rangeAndCategory = (lineIndex < this.tokenRanges.Count) ? this.tokenRanges[lineIndex] : new LineRangeAndTokenCategory();
+            SelectInputTextRange(rangeAndCategory.lineRange.start, rangeAndCategory.lineRange.Length);
+        }
+
+        private void textBoxLineRanges_Clicked(object sender, EventArgs e)
+        {
+            int lineIndex = textBoxLineRanges.GetLineFromCharIndex(textBoxLineRanges.SelectionStart);
+            LineRange lineRange = (lineIndex < this.lineRanges.Count) ? this.lineRanges[lineIndex] : new LineRange();
+            SelectInputTextRange(lineRange.start, lineRange.Length);
         }
     }
 }

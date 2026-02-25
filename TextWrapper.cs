@@ -52,8 +52,8 @@ namespace TextWrapper
 
         public struct LineBreakpointOpportunity
         {
-            // Some of these breaking flags apply to the entire token's character range, while others only apply to the tail end
-            // of the token (e.g. the break opportunities after the code unit).
+            // Some of these breaking flags are properties that apply to the entire token's code unit range, while others
+            // only apply to the tail end of the token (the last code unit) for division points.
             [Flags]
             public enum BreakFlags : byte
             {
@@ -78,15 +78,16 @@ namespace TextWrapper
             public bool IsOpening => (breakFlags & BreakFlags.IsOpening) != 0;
             public bool IsClosing => (breakFlags & BreakFlags.IsClosing) != 0;
             public bool ShouldSplitItems => (breakFlags & BreakFlags.ShouldSplitItems) != 0;
+            public bool IsVisible => (breakFlags & BreakFlags.IsInvisible) == 0;
             public bool IsInvisible => (breakFlags & BreakFlags.IsInvisible) != 0;
         }
 
-        // Line range using starting and ending text positions, which is similar to System.Drawing.CharacterRange,
+        // A line range uses starting and ending text positions, which is similar to System.Drawing.CharacterRange,
         // except it uses half-open intervals which are easier to update and split than First + Length.
         public struct LineRange
         {
-            public uint start;
-            public uint end;
+            public uint start;  // Inclusive
+            public uint end;    // Exclusive
 
             public uint Length => end - start;
 
@@ -95,6 +96,8 @@ namespace TextWrapper
                 this.start = start;
                 this.end = end;
             }
+
+            public bool IsEmpty => (end <= start);
         }
 
         // Shorter aliases for more compact table usage.
@@ -113,7 +116,6 @@ namespace TextWrapper
 
         // Character categories for quick lookup.
         // Characters outside the ASCII range are treated as Identifier by default.
-        // MLIR doesn't appear to support Unicode identifiers anyway.
         static TokenCategory[] tokenCategories = new TokenCategory[128]
         {
         //              _0    _1    _2    _3    _4    _5    _6    _7    _8    _9    _A    _B    _C    _D    _E    _F
@@ -135,11 +137,18 @@ namespace TextWrapper
                         Idnt, Idnt, Idnt, Idnt, Idnt, Idnt, Idnt, Idnt, Idnt, Idnt, Idnt, Open, Othr, Clos, Othr, None,
         };
 
+        // Short aliases for break flags for compact table usage.
+        // These flags apply only to the tail end of the token, on the last code unit.
         const LboBf BfNo /* no break / glue      */ = LboBf.None;
         const LboBf BfCn /* can break            */ = LboBf.CanBreakAfter;
         const LboBf BfLb /* hard line break      */ = LboBf.CanBreakAfter | LboBf.MustBreakAfter;
         const LboBf BfDe /* delimiter with break */ = LboBf.CanBreakAfter | LboBf.CanSplitAfter;
         const LboBf BfDn /* delimiter no break   */ =                       LboBf.CanSplitAfter;
+
+        // Flags that apply to the entire token.
+        const LboBf BfIn = LboBf.IsInvisible;
+        const LboBf BfOp = LboBf.IsOpening;
+        const LboBf BfCl = LboBf.IsClosing;
 
         // Map adjacent pair of tokens (previous,next) to breaking flags.
         // The table corresponds to these rules applied in order:
@@ -147,7 +156,7 @@ namespace TextWrapper
         // Brek,any  - must break after line break
         // any, Brek - no break before line break
         // None,any  - no break after none
-        // any, None - can break after non
+        // any, None - can break after none
         // Open,Clos - no break between empty opening/closing pair
         // Open,any  - can break after opening punctuation
         // any ,Spac - no break before space
@@ -159,7 +168,7 @@ namespace TextWrapper
         // Sigl,Idnt - no break between sigil punctuation and identifier
         // otherwise - can break anywhere else
         //
-        public static LboBf[,] breakPairTable = new LboBf[,]
+        public static LboBf[,] defaultBreakPairTable = new LboBf[,]
         {
             //           None, Spac, Brek, Cmnt, Idnt, Open, Clos, Delm, Sigl, Othr, Nmbr, Strg,
             //                 ' '   CRLF  //    abc   ({[<   )}]> ,     #%!   +-*   123   "az"
@@ -177,14 +186,10 @@ namespace TextWrapper
             /* Strg */  {BfCn, BfNo, BfNo, BfCn, BfCn, BfCn, BfCn, BfNo, BfCn, BfCn, BfCn, BfCn},
         };
 
-        const LboBf BfIn = LboBf.IsInvisible;
-        const LboBf BfOp = LboBf.IsOpening;
-        const LboBf BfCl = LboBf.IsClosing;
-
         // Map current token category to breaking flags which apply to the entire token's character range,
         // such as IsOpening or IsInvisible.
         //
-        public static LboBf[] categoryBreakFlags = new LboBf[]
+        public static LboBf[] defaultCategoryBreakFlags = new LboBf[]
         {
             //  None, Spac, Brek, Cmnt, Idnt, Open, Clos, Delm, Sigl, Othr, Nmbr, Strg,
             //        ' '   CRLF  //    abc   ({[<   )}]> ,     #%!   +-*   123   "az"
@@ -315,36 +320,14 @@ namespace TextWrapper
             }
         }
 
-        // Moves the text position to the end of the line (just before any line break, but not consuming it)
-        // or to the end of the text if no more explicit line breaks are found.
-        public static void SeekLineUpToLineBreak(string text, ref uint textPosition)
+        public static LineBreakpointOpportunity[] GetLineBreakpointOpportunities(string inputText)
         {
-            for (; textPosition < text.Length && GetTokenCategory(text[(int)textPosition]) != TokenCategory.LineBreak; ++textPosition)
-            {
-            }
-        }
-
-        // Moves the text position to the end of any whitespace, meaning the first character afterward, or to the end
-        // of the text if no more explicit line breaks are found.
-        public static void SeekAfterWhitespace(string text, ref uint textPosition)
-        {
-            for (; textPosition < text.Length && GetTokenCategory(text[(int)textPosition]) == TokenCategory.Whitespace; ++textPosition)
-            {
-            }
-        }
-
-        // Moves the text position to the end of any whitespace, meaning the first character afterward, or to the end
-        // of the text if no more explicit line breaks are found.
-        public static void SeekAfterWhitespace(LineBreakpointOpportunity[] breakpointOpportunities, ref uint textPosition)
-        {
-            for (; textPosition < breakpointOpportunities.Length && breakpointOpportunities[(int)textPosition].IsInvisible; ++textPosition)
-            {
-            }
+            return GetLineBreakpointOpportunities(inputText, defaultBreakPairTable, defaultCategoryBreakFlags);
         }
 
         // Return an array of breakpoint opportunities and nesting levels for each code unit in the text,
         // purely based on text properties and adjacent token pairs using the given tables.
-        // After this point, the original text is not needed anymore for deciding wrapping decisions.
+        // After this point, the original text is not needed anymore for wrapping decisions.
         public static LineBreakpointOpportunity[] GetLineBreakpointOpportunities(
             string inputText,
             LboBf[,] breakPairTable,
@@ -364,7 +347,7 @@ namespace TextWrapper
             LineBreakpointOpportunity dummyBreakpointOpportunity = new LineBreakpointOpportunity();
             ref LineBreakpointOpportunity previousBreakpointOpportunity = ref dummyBreakpointOpportunity;
 
-            // Read every pair of adjacent tokens, assigning breaking flags. e.g.
+            // Read every pair of adjacent tokens, and assign breaking flags. e.g.
             //
             //      sigil      x identifier = glue (no break)
             //      identifier x identifier = can break
@@ -406,10 +389,6 @@ namespace TextWrapper
                     // Well formed text should always match on the first try, but we can be resilient to malformed text
                     // by allowing mismatches and just popping until we find a match or run out of stack.
                     char trailingChar = inputText[(int)currentTokenLastPosition];
-                    //if (trailingChar == '}')
-                    //{
-                    //    previousBreakpointOpportunity.breakFlags |= LboBf.ShouldBreakAfter | LboBf.CanBreakAfter;
-                    //}
                     while (delimiterStack.Count > 0)
                     {
                         char closingDelimiter = delimiterStack[delimiterStack.Count - 1];
@@ -446,73 +425,6 @@ namespace TextWrapper
             return breakpointOpportunities;
         }
 
-        // Split the given line index at the text position, returning true if the split happened
-        // or false if it's already split there (or out of bounds).
-        static bool SplitLineRanges(List<LineRange> lineRanges, int lineIndex, uint breakPosition)
-        {
-            Debug.Assert(lineRanges != null);
-            Debug.Assert(lineIndex < lineRanges.Count);
-
-            // If the split point is not within the line range or at the edges, treat it as a nop
-            // (simplifying calling code so it doesn't need to check).
-            LineRange lineRange = lineRanges[lineIndex];
-            Debug.Assert(lineRange.end >= lineRange.start, "Empty LineRange's are okay, but not inverted ones.");
-
-            if (breakPosition > lineRange.start && breakPosition < lineRange.end)
-            {
-                lineRanges.Insert(lineIndex, new LineRange(lineRange.start, breakPosition));
-                lineRanges[lineIndex + 1] = new LineRange(breakPosition, lineRange.end);
-                return true;
-            }
-            return false;
-        }
-
-        enum LookDirection
-        {
-            Forward,
-            Backward,
-        };
-
-        // See if a line break is adjacent to the given text position in the given direction,
-        // ignoring any invisible whitespace characters in between. This is useful to avoid
-        // splitting a line even further when there's already an explicit line break. e.g.
-        //
-        //      "Hello world{CR}{LF} My name is Inigo..."
-        //                 /\---> yes, line break is adjacent to "d" (text position 11)
-        //      "Hello world   {CR}{LF} My name is Inigo..."
-        //                 /\---> yes, line break is adjacent to "d" skipping over spaces (text position 11)
-        //      "Hello world{CR}{LF} My name is Inigo..."
-        //           /\---> no, line break is not adjacent to "o" (text position 5)
-        //
-        static bool IsLineBreakAdjacent(
-            LineBreakpointOpportunity[] breakpointOpportunities,
-            uint textPosition,
-            LookDirection lookDirection
-            )
-        {
-            var breakpointsLength = breakpointOpportunities.Length;
-            bool lookForward = (lookDirection == LookDirection.Forward);
-
-            while (lookForward ? (textPosition < breakpointsLength) : (textPosition-- != 0))
-            {
-                LineBreakpointOpportunity breakpoint = breakpointOpportunities[textPosition];
-                if (breakpoint.MustBreakAfter)
-                {
-                    return true;
-                }
-                else if (!breakpoint.IsInvisible)
-                {
-                    return false;
-                }
-
-                if (lookForward)
-                {
-                    ++textPosition;
-                }
-            }
-            return false;
-        }
-
         // Collect all the ranges per line, splitting based on the maximum line length.
         // The input text is not read at this point, just used to stitch together lines.
         // Although the function itself is not recursive, it does use look-ahead of
@@ -545,7 +457,7 @@ namespace TextWrapper
                 }
                 lineRanges[lineIndex] = lineRange; // Update range lest whitespace was skipped.
 
-                uint breakPosition = lineRange.start; // Actual break position to split.
+                uint breakPosition = lineRange.end; // Actual break position to split.
                 uint candidateBreakPosition = lineRange.start; // Best candidate so far.
                 uint firstIndentationLevel = breakpointOpportunities[(int)lineRange.start].indentationLevel;
                 uint minimumIndentationLevel = firstIndentationLevel; // Lowest level found on line.
@@ -578,6 +490,9 @@ namespace TextWrapper
                     //
                     if (lineLength > maximumLineLength && candidateBreakPosition > lineRange.start && !breakpointOpportunity.IsInvisible)
                     {
+                        // Also skip over any trailing invisible characters immediately afterward to avoid breaking before
+                        // trailing whitespace, which could yield pointless blank lines.
+                        SeekAfterTrailingInvisible(breakpointOpportunities, ref candidateBreakPosition);
                         breakPosition = candidateBreakPosition;
                         break;
                     }
@@ -595,23 +510,18 @@ namespace TextWrapper
                     //      "Hello (there dear) world"
                     //            /\ <---- Skip over "there dear", keeping "Hello " as candidate breakpoint since it's at the right level.
                     //
-                    if (breakpointOpportunity.indentationLevel == minimumIndentationLevel && breakpointOpportunity.CanBreakAfter)
+                    if (breakpointOpportunity.CanBreakAfter && breakpointOpportunity.indentationLevel == minimumIndentationLevel)
                     {
-                        // Record this candidate break, but continue looking for a potentially later one.
+                        // Record this candidate break, but continue looking for a potential later one.
                         candidateBreakPosition = textPosition;
                     }
                 }
 
-                // If no candidate breakpoints were found, jump to the end of the known line range for some forward progress.
-                // This might happen with a really long word.
-                if (breakPosition == lineRange.start)
-                {
-                    breakPosition = lineRange.end;
-                }
-                else // Split the current line at the candidate breakpoint.
-                {
-                    SplitLineRanges(lineRanges, lineIndex, breakPosition);
-                }
+                // Split the current line at the found breakpoint.
+                // If no candidate breakpoints were found, breakPosition will be at the end of the line range,
+                // which could happen for a really long single word.
+                Debug.Assert(breakPosition > lineRange.start || lineRange.IsEmpty);
+                SplitLineRanges(lineRanges, lineIndex, breakPosition);
 
                 // Split items inside level changes due to opening/closing puncuation.
                 // This scans ahead until the end of the level, updating the total line count.
@@ -626,20 +536,6 @@ namespace TextWrapper
             }
 
             return lineRanges;
-        }
-
-        private static void AdvanceLineIndexToTextPosition(
-            List<LineRange> lineRanges,
-            ref int lineIndex,
-            uint textPosition
-            )
-        {
-            int updatedLineIndex = lineIndex;
-            while (updatedLineIndex < lineRanges.Count && textPosition >= lineRanges[updatedLineIndex].end)
-            {
-                ++updatedLineIndex;
-            }
-            lineIndex = updatedLineIndex;
         }
 
         // Split the opening/closing dividers and potentially all subitems separated by commas. e.g.
@@ -716,9 +612,8 @@ namespace TextWrapper
             //      function(parameterOne, parameterTwo)
             //              /\ <---- Break after parentheses to separate parameters.
             //
-            if (!IsLineBreakAdjacent(breakpointOpportunities, breakPositionAfterOpening, LookDirection.Forward))
+            if (!SeekAfterTrailingInvisible(breakpointOpportunities, ref breakPositionAfterOpening))
             {
-                SeekAfterWhitespace(breakpointOpportunities, ref breakPositionAfterOpening);
                 AdvanceLineIndexToTextPosition(lineRanges, ref lineIndex, breakPositionAfterOpening);
                 SplitLineRanges(lineRanges, lineIndex, breakPositionAfterOpening);
             }
@@ -747,9 +642,8 @@ namespace TextWrapper
                 if (shouldSplitDelimitedItems &&
                     breakpointOpportunity.indentationLevel == nestedIndentationLevel &&
                     breakpointOpportunity.CanSplitAfter &&
-                    !IsLineBreakAdjacent(breakpointOpportunities, delimiterBreakPosition, LookDirection.Forward))
+                    !SeekAfterTrailingInvisible(breakpointOpportunities, ref delimiterBreakPosition))
                 {
-                    SeekAfterWhitespace(breakpointOpportunities, ref delimiterBreakPosition);
                     AdvanceLineIndexToTextPosition(lineRanges, ref lineIndex, delimiterBreakPosition);
                     SplitLineRanges(lineRanges, lineIndex, delimiterBreakPosition);
                 }
@@ -759,8 +653,8 @@ namespace TextWrapper
             //
             //      someScope { someText moreLongTextHere }
             //                                           /\ <---- Break before closing punctuation.
-            if (breakPositionBeforeClosing < breakpointOpportunitiesLength &&
-                !IsLineBreakAdjacent(breakpointOpportunities, breakPositionBeforeClosing, LookDirection.Backward))
+            if (breakPositionBeforeClosing < breakpointOpportunitiesLength && // Check possibly unpaired opening.
+                !SeekAfterTrailingInvisible(breakpointOpportunities, ref breakPositionBeforeClosing))
             {
                 AdvanceLineIndexToTextPosition(lineRanges, ref lineIndex, breakPositionBeforeClosing);
                 SplitLineRanges(lineRanges, lineIndex, breakPositionBeforeClosing);
@@ -796,13 +690,153 @@ namespace TextWrapper
                 wrappedText.Append(inputText.Substring((int)lineRange.start, (int)lineRange.Length));
 
                 // Add an explicit line break if there isn't already one in the input.
-                if (!breakpointOpportunities[lineRange.end - 1].MustBreakAfter)
+                if (lineRange.IsEmpty || !breakpointOpportunities[lineRange.end - 1].MustBreakAfter)
                 {
                     wrappedText.Append("\r\n");
                 }
             }
 
             return wrappedText.ToString();
+        }
+
+        public static string GetMlirWrappedText(
+            string inputText,
+            uint maximumLineLength,
+            uint lineIndentationPerLevel
+            )
+        {
+            LineBreakpointOpportunity[] breakpointOpportunities = GetLineBreakpointOpportunities(inputText, defaultBreakPairTable, defaultCategoryBreakFlags);
+            List<LineRange> lineRanges = GetLineRanges(inputText, breakpointOpportunities, maximumLineLength, lineIndentationPerLevel);
+            return GetWrappedText(inputText, breakpointOpportunities, lineRanges, lineIndentationPerLevel);
+        }
+
+        // Moves the text position to the end of the line (just before any line break, but not consuming it)
+        // or to the end of the text if no more explicit line breaks are found.
+        public static void SeekLineUpToLineBreak(string text, ref uint textPosition)
+        {
+            for (; textPosition < text.Length && GetTokenCategory(text[(int)textPosition]) != TokenCategory.LineBreak; ++textPosition)
+            {
+            }
+        }
+
+        // Moves the text position to the end of any whitespace, meaning the first character afterward.
+        // Note this excludes line breaks (not considered whitespace).
+        public static void SeekAfterWhitespace(string text, ref uint textPosition)
+        {
+            for (; textPosition < text.Length && GetTokenCategory(text[(int)textPosition]) == TokenCategory.Whitespace; ++textPosition)
+            {
+            }
+        }
+
+        // Moves the text position to the end of any invisible characters, up to the end of line. e.g.
+        // Return true if moved past the trailing whitespace and line break.
+        //
+        //      "Hello     world{CR}{LF} My name is Inigo..."
+        //           /\--->
+        //                /\ move forward up to just after the whitespace - return false
+        //
+        //      "Hello world    {CR}{LF} My name is Inigo..."
+        //                 /\---------->
+        //                             /\ move forward up to just after the line break - return true
+        //
+        public static bool SeekAfterTrailingInvisible(LineBreakpointOpportunity[] breakpointOpportunities, ref uint textPosition)
+        {
+            while (textPosition < breakpointOpportunities.Length)
+            {
+                if (breakpointOpportunities[(int)textPosition].IsVisible)
+                {
+                    return false;
+                }
+                // Check and move past any line break.
+                if (breakpointOpportunities[(int)textPosition++].MustBreakAfter)
+                {
+                    return true;
+                }
+            }
+            return true; 
+        }
+
+        private static void AdvanceLineIndexToTextPosition(
+            List<LineRange> lineRanges,
+            ref int lineIndex,
+            uint textPosition
+            )
+        {
+            int updatedLineIndex = lineIndex;
+            while (updatedLineIndex < lineRanges.Count && textPosition >= lineRanges[updatedLineIndex].end)
+            {
+                ++updatedLineIndex;
+            }
+            lineIndex = updatedLineIndex;
+        }
+
+        // Split the given line index at the text position, returning true if the split happened
+        // or false if it's already split there (or out of bounds).
+        static bool SplitLineRanges(List<LineRange> lineRanges, int lineIndex, uint breakPosition)
+        {
+            Debug.Assert(lineRanges != null);
+            Debug.Assert(lineIndex < lineRanges.Count);
+
+            // If the split point is not within the line range or at the edges, treat it as a nop
+            // (simplifying calling code so it doesn't need to check).
+            LineRange lineRange = lineRanges[lineIndex];
+            Debug.Assert(lineRange.end >= lineRange.start, "Empty LineRange's are okay, but not inverted ones.");
+
+            if (breakPosition > lineRange.start && breakPosition < lineRange.end)
+            {
+                lineRanges.Insert(lineIndex, new LineRange(lineRange.start, breakPosition));
+                lineRanges[lineIndex + 1] = new LineRange(breakPosition, lineRange.end);
+                return true;
+            }
+            return false;
+        }
+
+        enum LookDirection
+        {
+            Forward,
+            Backward,
+        };
+
+        // See if a line break is adjacent to the given text position in the given direction,
+        // ignoring any invisible whitespace characters in between. This is useful to avoid
+        // splitting a line even further when there's already an explicit line break. e.g.
+        //
+        //      "Hello world{CR}{LF} My name is Inigo..."
+        //                 /\ <---- yes, line break is adjacent to "d" (text position 11)
+        //
+        //      "Hello world   {CR}{LF} My name is Inigo..."
+        //                 /\ <---- yes, line break is adjacent to "d" skipping over spaces (text position 11)
+        //
+        //      "Hello world{CR}{LF} My name is Inigo..."
+        //           /\ <---- no, line break is not adjacent to "o" (text position 5)
+        //
+        static bool IsLineBreakAdjacent(
+            LineBreakpointOpportunity[] breakpointOpportunities,
+            uint textPosition,
+            LookDirection lookDirection
+            )
+        {
+            var breakpointsLength = breakpointOpportunities.Length;
+            bool lookForward = (lookDirection == LookDirection.Forward);
+
+            while (lookForward ? (textPosition < breakpointsLength) : (textPosition-- != 0))
+            {
+                LineBreakpointOpportunity breakpoint = breakpointOpportunities[textPosition];
+                if (breakpoint.MustBreakAfter)
+                {
+                    return true; // Adjacent line break character found.
+                }
+                else if (!breakpoint.IsInvisible)
+                {
+                    return false; // Non-whitespace found. So, nonadjacent to line break.
+                }
+
+                if (lookForward)
+                {
+                    ++textPosition;
+                }
+            }
+            return false;
         }
     }
 }

@@ -95,6 +95,20 @@
             this.labelTokens.TabIndex = 2;
             this.labelTokens.Text = "&Tokens:";
             // 
+            // textBoxTokens
+            // 
+            this.textBoxTokens.HideSelection = false;
+            this.textBoxTokens.Location = new System.Drawing.Point(8, 224);
+            this.textBoxTokens.Multiline = true;
+            this.textBoxTokens.Name = "textBoxTokens";
+            this.textBoxTokens.ReadOnly = true;
+            this.textBoxTokens.ScrollBars = System.Windows.Forms.ScrollBars.Both;
+            this.textBoxTokens.Size = new System.Drawing.Size(368, 168);
+            this.textBoxTokens.TabIndex = 3;
+            this.textBoxTokens.Text = "(click the Wrap button)";
+            this.textBoxTokens.WordWrap = false;
+            this.textBoxTokens.Click += new System.EventHandler(this.textBoxTokens_Clicked);
+            // 
             // labelUnwrapped
             // 
             this.labelUnwrapped.AutoSize = true;
@@ -112,19 +126,6 @@
             this.labelOutputText.Size = new System.Drawing.Size(119, 13);
             this.labelOutputText.TabIndex = 8;
             this.labelOutputText.Text = "&Output text wrapped:";
-            // 
-            // textBoxTokens
-            // 
-            this.textBoxTokens.HideSelection = false;
-            this.textBoxTokens.Location = new System.Drawing.Point(8, 224);
-            this.textBoxTokens.Multiline = true;
-            this.textBoxTokens.Name = "textBoxTokens";
-            this.textBoxTokens.ReadOnly = true;
-            this.textBoxTokens.ScrollBars = System.Windows.Forms.ScrollBars.Both;
-            this.textBoxTokens.Size = new System.Drawing.Size(368, 168);
-            this.textBoxTokens.TabIndex = 3;
-            this.textBoxTokens.Text = "(click the Wrap button)";
-            this.textBoxTokens.WordWrap = false;
             // 
             // labelInputText
             // 
@@ -184,6 +185,7 @@
             this.textBoxBreakFlags.TabIndex = 5;
             this.textBoxBreakFlags.Text = "(click the Wrap button)";
             this.textBoxBreakFlags.WordWrap = false;
+            this.textBoxBreakFlags.Click += new System.EventHandler(this.textBoxBreakFlags_Clicked);
             // 
             // labelLineRanges
             // 
@@ -206,6 +208,7 @@
             this.textBoxLineRanges.TabIndex = 7;
             this.textBoxLineRanges.Text = "(click the Wrap button)";
             this.textBoxLineRanges.WordWrap = false;
+            this.textBoxLineRanges.Click += new System.EventHandler(this.textBoxLineRanges_Clicked);
             // 
             // labelWrapWidth
             // 
