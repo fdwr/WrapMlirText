@@ -265,6 +265,7 @@
             this.Controls.Add(this.textBoxOutput);
             this.Controls.Add(this.textBoxInput);
             this.Font = new System.Drawing.Font("Segoe UI", 8.25F);
+            this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Name = "formMain";
             this.Text = "MLIR Wrap Text";
             this.Load += new System.EventHandler(this.formMain_Load);
