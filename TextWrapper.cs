@@ -492,7 +492,7 @@ namespace TextWrapper
                     {
                         // Also skip over any trailing invisible characters immediately afterward to avoid breaking before
                         // trailing whitespace, which could yield pointless blank lines.
-                        SeekAfterTrailingInvisible(breakpointOpportunities, ref candidateBreakPosition);
+                        SeekAfterTrailingInvisibles(breakpointOpportunities, ref candidateBreakPosition);
                         breakPosition = candidateBreakPosition;
                         break;
                     }
@@ -510,7 +510,7 @@ namespace TextWrapper
                     //      "Hello (there dear) world"
                     //            /\ <---- Skip over "there dear", keeping "Hello " as candidate breakpoint since it's at the right level.
                     //
-                    if (breakpointOpportunity.CanBreakAfter && breakpointOpportunity.indentationLevel == minimumIndentationLevel)
+                    if (breakpointOpportunity.indentationLevel == minimumIndentationLevel && breakpointOpportunity.CanBreakAfter)
                     {
                         // Record this candidate break, but continue looking for a potential later one.
                         candidateBreakPosition = textPosition;
@@ -612,7 +612,7 @@ namespace TextWrapper
             //      function(parameterOne, parameterTwo)
             //              /\ <---- Break after parentheses to separate parameters.
             //
-            if (!SeekAfterTrailingInvisible(breakpointOpportunities, ref breakPositionAfterOpening))
+            if (!SeekAfterTrailingInvisibles(breakpointOpportunities, ref breakPositionAfterOpening))
             {
                 AdvanceLineIndexToTextPosition(lineRanges, ref lineIndex, breakPositionAfterOpening);
                 SplitLineRanges(lineRanges, lineIndex, breakPositionAfterOpening);
@@ -642,19 +642,19 @@ namespace TextWrapper
                 if (shouldSplitDelimitedItems &&
                     breakpointOpportunity.indentationLevel == nestedIndentationLevel &&
                     breakpointOpportunity.CanSplitAfter &&
-                    !SeekAfterTrailingInvisible(breakpointOpportunities, ref delimiterBreakPosition))
+                    !SeekAfterTrailingInvisibles(breakpointOpportunities, ref delimiterBreakPosition))
                 {
                     AdvanceLineIndexToTextPosition(lineRanges, ref lineIndex, delimiterBreakPosition);
                     SplitLineRanges(lineRanges, lineIndex, delimiterBreakPosition);
                 }
             }
 
-            // Break before closing punctuation, unless there's already a line break. e.g.
+            // Break before closing punctuation, unless there's already a line break before. e.g.
             //
             //      someScope { someText moreLongTextHere }
             //                                           /\ <---- Break before closing punctuation.
             if (breakPositionBeforeClosing < breakpointOpportunitiesLength && // Check possibly unpaired opening.
-                !SeekAfterTrailingInvisible(breakpointOpportunities, ref breakPositionBeforeClosing))
+                !IsLineBreakAdjacent(breakpointOpportunities, breakPositionBeforeClosing, LookDirection.Backward))
             {
                 AdvanceLineIndexToTextPosition(lineRanges, ref lineIndex, breakPositionBeforeClosing);
                 SplitLineRanges(lineRanges, lineIndex, breakPositionBeforeClosing);
@@ -739,7 +739,7 @@ namespace TextWrapper
         //                 /\---------->
         //                             /\ move forward up to just after the line break - return true
         //
-        public static bool SeekAfterTrailingInvisible(LineBreakpointOpportunity[] breakpointOpportunities, ref uint textPosition)
+        public static bool SeekAfterTrailingInvisibles(LineBreakpointOpportunity[] breakpointOpportunities, ref uint textPosition)
         {
             while (textPosition < breakpointOpportunities.Length)
             {
