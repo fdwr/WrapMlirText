@@ -16,7 +16,7 @@ namespace WrapMlirText
     public partial class formMain : Form
     {
         [DllImport("User32.dll", CharSet = CharSet.Unicode)]
-        public static extern IntPtr SendMessage(System.IntPtr h, int msg, int wParam, int[] lParam);
+        public static extern IntPtr SendMessage(System.IntPtr windowHandle, int messageCode, int wParam, int[] lParam);
         const int WM_UPDATEUISTATE = 0x0128;
         const int UISF_HIDEACCEL = 0x2;
         const int UIS_CLEAR = 0x2;
