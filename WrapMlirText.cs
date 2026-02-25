@@ -35,6 +35,7 @@ namespace WrapMlirText
 
         private List<LineRangeAndTokenCategory> tokenRanges = new List<LineRangeAndTokenCategory>();
         private List<LineRange> lineRanges = new List<LineRange>();
+        private List<LineRange> outputLineRanges = new List<LineRange>();
 
         [DllImport("User32.dll", CharSet = CharSet.Unicode)]
         public static extern IntPtr SendMessage(System.IntPtr windowHandle, int messageCode, int wParam, int[] lParam);
@@ -77,13 +78,14 @@ namespace WrapMlirText
             uint lineIndentationPerLevel = LineIndentationPerLevel;
 
             var breakpointOpportunities = GetLineBreakpointOpportunities(inputText, defaultBreakPairTable, defaultCategoryBreakFlags);
-            lineRanges = GetLineRanges(inputText, breakpointOpportunities, maximumLineLength, lineIndentationPerLevel);
-            tokenRanges = GetTokenRanges(inputText);
+            this.lineRanges = GetLineRanges(inputText, breakpointOpportunities, maximumLineLength, lineIndentationPerLevel);
+            this.tokenRanges = GetTokenRanges(inputText);
+            this.outputLineRanges = GetOutputLineRanges(breakpointOpportunities, lineRanges, lineIndentationPerLevel);
 
-            textBoxTokens.Text = GetTokensText(inputText, tokenRanges);
+            textBoxTokens.Text = GetTokensText(inputText, this.tokenRanges);
             textBoxBreakFlags.Text = GetBreakFlagsText(inputText, breakpointOpportunities);
-            textBoxLineRanges.Text = GetLineRangesText(inputText, breakpointOpportunities, lineRanges, LineIndentationPerLevel);
-            textBoxOutput.Text = GetWrappedText(inputText, breakpointOpportunities, lineRanges, LineIndentationPerLevel);
+            textBoxLineRanges.Text = GetLineRangesText(inputText, breakpointOpportunities, this.lineRanges, LineIndentationPerLevel);
+            textBoxOutput.Text = GetWrappedText(inputText, breakpointOpportunities, this.lineRanges, LineIndentationPerLevel);
 
             ClearTextBoxSelection(textBoxTokens);
             ClearTextBoxSelection(textBoxBreakFlags);
@@ -163,6 +165,35 @@ namespace WrapMlirText
             return breakFlagsText.ToString();
         }
 
+        public static List<LineRange> GetOutputLineRanges(
+            TextWrapper.TextWrapper.LineBreakpointOpportunity[] breakpointOpportunities,
+            List<LineRange> lineRanges,
+            uint lineIndentationPerLevel
+            )
+        {
+            List<LineRange> outputLineRanges = new List<LineRange>();
+            uint textStart = 0, textEnd = 0;
+
+            foreach (var lineRange in lineRanges)
+            {
+                uint indentationLevel = 0;
+                bool hasHardLineBreak = false;
+                if (lineRange.start < breakpointOpportunities.Length)
+                {
+                    indentationLevel = breakpointOpportunities[(int)lineRange.start].indentationLevel * lineIndentationPerLevel;
+                }
+                if (lineRange.end > 0 && lineRange.end - 1 < breakpointOpportunities.Length)
+                {
+                    hasHardLineBreak = breakpointOpportunities[(int)lineRange.end - 1].MustBreakAfter;
+                }
+                textStart += indentationLevel;
+                textEnd = textStart + lineRange.Length + (hasHardLineBreak ? 0u : 2u);
+                outputLineRanges.Add(new LineRange { start = textStart, end = textEnd });
+                textStart = textEnd;
+            }
+            return outputLineRanges;
+        }
+
         public static string GetLineRangesText(
             string inputText,
             TextWrapper.TextWrapper.LineBreakpointOpportunity[] breakpointOpportunities,
@@ -185,31 +216,105 @@ namespace WrapMlirText
             return lineRangesText.ToString();
         }
 
-        private void SelectInputTextRange(uint start, uint length)
+        private void SelectTextBoxTextRange(System.Windows.Forms.TextBox textBox, uint start, uint length)
         {
-            textBoxInput.SelectionStart = (int)start;
-            textBoxInput.SelectionLength = (int)length;
-            textBoxInput.ScrollToCaret();
+            textBox.SelectionStart = (int)start;
+            textBox.SelectionLength = (int)length;
+            textBox.ScrollToCaret();
         }
 
-        private void textBoxBreakFlags_Clicked(object sender, EventArgs e)
+        private int? FindMatchingLineRangeIndex(List<LineRange> lineRanges, uint textPosition)
         {
-            int lineIndex = textBoxBreakFlags.GetLineFromCharIndex(textBoxBreakFlags.SelectionStart);
-            SelectInputTextRange((uint)lineIndex, 1);
+            int lineRangeIndex = lineRanges.BinarySearch(
+                new LineRange { start = textPosition, end = textPosition },
+                Comparer<LineRange>.Create((a, b) => (b.start < a.start) ? 1 : (b.start >= a.end) ? -1 : 0)
+            );
+            if (lineRangeIndex < 0)
+            {
+                return null;
+            }
+            return lineRangeIndex;
         }
 
-        private void textBoxTokens_Clicked(object sender, EventArgs e)
+        private void textBoxInput_SelectionPotentiallyChanged(object sender, EventArgs e)
         {
-            int lineIndex = textBoxTokens.GetLineFromCharIndex(textBoxTokens.SelectionStart);
-            var rangeAndCategory = (lineIndex < this.tokenRanges.Count) ? this.tokenRanges[lineIndex] : new LineRangeAndTokenCategory();
-            SelectInputTextRange(rangeAndCategory.lineRange.start, rangeAndCategory.lineRange.Length);
+            uint textPosition = (uint)textBoxInput.SelectionStart;
+            uint textLength = (uint)textBoxInput.SelectionLength;
+
+            if (FindMatchingLineRangeIndex(this.lineRanges, textPosition) is int lineIndex1 &&
+                FindMatchingLineRangeIndex(this.lineRanges, textPosition + textLength) is int lineIndex2)
+            {
+                LineRange inputLineRange1 = (lineIndex1 < this.lineRanges.Count) ? this.lineRanges[lineIndex1] : new LineRange();
+                LineRange outputLineRange1 = (lineIndex1 < this.outputLineRanges.Count) ? this.outputLineRanges[lineIndex1] : new LineRange();
+                uint outputTextPosition1 = outputLineRange1.start + textPosition - inputLineRange1.start;
+
+                LineRange inputLineRange2 = (lineIndex2 < this.lineRanges.Count) ? this.lineRanges[lineIndex2] : new LineRange();
+                LineRange outputLineRange2 = (lineIndex2 < this.outputLineRanges.Count) ? this.outputLineRanges[lineIndex2] : new LineRange();
+                uint outputTextPosition2 = outputLineRange2.start + textPosition + textLength - inputLineRange2.start;
+
+                SelectTextBoxTextRange(textBoxOutput, outputTextPosition1, outputTextPosition2 - outputTextPosition1);
+            }
         }
 
-        private void textBoxLineRanges_Clicked(object sender, EventArgs e)
+        private void textBoxOutput_SelectionPotentiallyChanged(object sender, EventArgs e)
+        {
+            uint textPosition = (uint)textBoxOutput.SelectionStart;
+            uint textLength = (uint)textBoxOutput.SelectionLength;
+
+            if (FindMatchingLineRangeIndex(this.outputLineRanges, textPosition) is int lineIndex1 &&
+                FindMatchingLineRangeIndex(this.outputLineRanges, textPosition + textLength) is int lineIndex2)
+            {
+                LineRange inputLineRange1 = (lineIndex1 < this.lineRanges.Count) ? this.lineRanges[lineIndex1] : new LineRange();
+                LineRange outputLineRange1 = (lineIndex1 < this.outputLineRanges.Count) ? this.outputLineRanges[lineIndex1] : new LineRange();
+                uint inputTextPosition1 = inputLineRange1.start + textPosition - outputLineRange1.start;
+
+                LineRange inputLineRange2 = (lineIndex2 < this.lineRanges.Count) ? this.lineRanges[lineIndex2] : new LineRange();
+                LineRange outputLineRange2 = (lineIndex2 < this.outputLineRanges.Count) ? this.outputLineRanges[lineIndex2] : new LineRange();
+                uint inputTextPosition2 = inputLineRange2.start + textPosition + textLength - outputLineRange2.start;
+                SelectTextBoxTextRange(textBoxInput, inputTextPosition1, inputTextPosition2 - inputTextPosition1);
+            }
+        }
+
+        private void textBoxTokens_SelectionPotentiallyChanged(object sender, EventArgs e)
+        {
+            int tokenLineIndex = textBoxTokens.GetLineFromCharIndex(textBoxTokens.SelectionStart);
+            var rangeAndCategory = (tokenLineIndex < this.tokenRanges.Count) ? this.tokenRanges[tokenLineIndex] : new LineRangeAndTokenCategory();
+            uint textPosition = rangeAndCategory.lineRange.start;
+            uint textLength = rangeAndCategory.lineRange.Length;
+            SelectTextBoxTextRange(textBoxInput, textPosition, textLength);
+
+            if (FindMatchingLineRangeIndex(this.lineRanges, textPosition) is int lineIndex)
+            {
+                LineRange inputLineRange = (lineIndex < this.lineRanges.Count) ? this.lineRanges[lineIndex] : new LineRange();
+                LineRange outputLineRange = (lineIndex < this.outputLineRanges.Count) ? this.outputLineRanges[lineIndex] : new LineRange();
+                uint outputTextPosition = outputLineRange.start + textPosition - inputLineRange.start;
+                SelectTextBoxTextRange(textBoxOutput, outputTextPosition, textLength);
+            }
+        }
+
+        private void textBoxBreakFlags_SelectionPotentiallyChanged(object sender, EventArgs e)
+        {
+            uint textPosition = (uint)textBoxBreakFlags.GetLineFromCharIndex(textBoxBreakFlags.SelectionStart);
+            uint textLength = 1;
+            SelectTextBoxTextRange(textBoxInput, textPosition, textLength);
+
+            if (FindMatchingLineRangeIndex(this.lineRanges, textPosition) is int lineIndex)
+            {
+                LineRange inputLineRange = (lineIndex < this.lineRanges.Count) ? this.lineRanges[lineIndex] : new LineRange();
+                LineRange outputLineRange = (lineIndex < this.outputLineRanges.Count) ? this.outputLineRanges[lineIndex] : new LineRange();
+                uint outputTextPosition = outputLineRange.start + textPosition - inputLineRange.start;
+                SelectTextBoxTextRange(textBoxOutput, outputTextPosition, textLength);
+            }
+        }
+
+        private void textBoxLineRanges_SelectionPotentiallyChanged(object sender, EventArgs e)
         {
             int lineIndex = textBoxLineRanges.GetLineFromCharIndex(textBoxLineRanges.SelectionStart);
             LineRange lineRange = (lineIndex < this.lineRanges.Count) ? this.lineRanges[lineIndex] : new LineRange();
-            SelectInputTextRange(lineRange.start, lineRange.Length);
+            LineRange outputLineRange = (lineIndex < this.outputLineRanges.Count) ? this.outputLineRanges[lineIndex] : new LineRange();
+            
+            SelectTextBoxTextRange(textBoxInput, lineRange.start, lineRange.Length);
+            SelectTextBoxTextRange(textBoxOutput, outputLineRange.start, outputLineRange.Length);
         }
     }
 }
