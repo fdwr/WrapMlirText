@@ -91,6 +91,7 @@
             this.textBoxInput.Click += new System.EventHandler(this.textBoxInput_SelectionPotentiallyChanged);
             this.textBoxInput.DoubleClick += new System.EventHandler(this.textBoxInput_SelectionPotentiallyChanged);
             this.textBoxInput.KeyUp += new System.Windows.Forms.KeyEventHandler(this.textBoxInput_SelectionPotentiallyChanged);
+            this.textBoxInput.TextChanged += new System.EventHandler(this.textBoxInput_TextChanged);
             // 
             // labelTokens
             // 

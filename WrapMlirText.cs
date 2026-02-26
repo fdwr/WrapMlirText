@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Diagnostics;
 using static TextWrapper.TextWrapper;
+using System.Timers;
 
 namespace WrapMlirText
 {
@@ -22,8 +23,6 @@ namespace WrapMlirText
         private const int EM_SETTABSTOPS = 0x00CB;
 
         // UI configuration constants
-        private const int TokensTabWidth = 20;
-        private const int LineRangesTabWidth = 20;
         private const uint DefaultMaximumLineLength = 120;
         private const uint DefaultLineIndentationPerLevel = 4;
 
@@ -31,6 +30,8 @@ namespace WrapMlirText
         private List<TokenCategory> tokenCatogories = new List<TokenCategory>();
         private List<LineRange> lineRanges = new List<LineRange>();
         private List<LineRange> outputLineRanges = new List<LineRange>();
+
+        private System.Windows.Forms.Timer timer; // Delay until updating wrapped text.
 
         [DllImport("User32.dll", CharSet = CharSet.Unicode)]
         public static extern IntPtr SendMessage(System.IntPtr windowHandle, int messageCode, int wParam, int[] lParam);
@@ -63,6 +64,10 @@ namespace WrapMlirText
             SetTabStops(this.textBoxTokens, new int[] { 12 * 4, 32 * 4 });
             SetTabStops(this.textBoxBreakFlags, new int[] { 8 * 4, 14 * 4, 18 * 4 });
             SetTabStops(this.textBoxLineRanges, new int[] { 12 * 4, 16 * 4, 20 * 4 });
+
+            this.timer = new System.Windows.Forms.Timer();
+            timer.Interval = 500; // Half second delay until rewrapping text.
+            timer.Tick += new EventHandler(OnTimerWrap);
         }
 
         private void formMain_Load(object sender, EventArgs e)
@@ -72,9 +77,15 @@ namespace WrapMlirText
             ClearTextBoxSelection(textBoxOutput);
             ClearTextBoxSelection(textBoxBreakFlags);
             ClearTextBoxSelection(textBoxLineRanges);
+            WrapInputText();
         }
 
         private void buttonWrap_Click(object sender, EventArgs e)
+        {
+            WrapInputText();
+        }
+
+        private void WrapInputText()
         {
             string inputText = textBoxInput.Text;
             uint maximumLineLength = MaximumLineLength;
@@ -407,6 +418,20 @@ namespace WrapMlirText
             var lineInterval = GetTextBoxSelectedLineInterval((TextBox)sender);
             var charRange = GetCharacterRangeFromLineInterval(this.lineRanges, lineInterval);
             UpdateSelections(sender, charRange);
+        }
+
+        private void textBoxInput_TextChanged(object sender, EventArgs e)
+        {
+            timer.Stop();
+            timer.Start();
+        }
+
+        private void OnTimerWrap(object source, EventArgs e)
+        {
+            timer.Stop();
+            WrapInputText();
+            var charRange = GetTextBoxSelectedCharacterRange(textBoxInput);
+            UpdateSelections(source, charRange);
         }
     }
 }
