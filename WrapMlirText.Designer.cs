@@ -73,8 +73,8 @@
             this.textBoxOutput.Text = "(click the Wrap button)";
             this.textBoxOutput.WordWrap = false;
             this.textBoxOutput.Click += new System.EventHandler(this.textBoxOutput_SelectionPotentiallyChanged);
-            this.textBoxOutput.KeyUp += new System.Windows.Forms.KeyEventHandler(this.textBoxOutput_SelectionPotentiallyChanged);
             this.textBoxOutput.DoubleClick += new System.EventHandler(this.textBoxOutput_SelectionPotentiallyChanged);
+            this.textBoxOutput.KeyUp += new System.Windows.Forms.KeyEventHandler(this.textBoxOutput_SelectionPotentiallyChanged);
             // 
             // textBoxInput
             // 
@@ -101,22 +101,6 @@
             this.labelTokens.TabIndex = 2;
             this.labelTokens.Text = "&Tokens:";
             // 
-            // textBoxTokens
-            // 
-            this.textBoxTokens.HideSelection = false;
-            this.textBoxTokens.Location = new System.Drawing.Point(8, 224);
-            this.textBoxTokens.Multiline = true;
-            this.textBoxTokens.Name = "textBoxTokens";
-            this.textBoxTokens.ReadOnly = true;
-            this.textBoxTokens.ScrollBars = System.Windows.Forms.ScrollBars.Both;
-            this.textBoxTokens.Size = new System.Drawing.Size(368, 168);
-            this.textBoxTokens.TabIndex = 3;
-            this.textBoxTokens.Text = "(click the Wrap button)";
-            this.textBoxTokens.WordWrap = false;
-            this.textBoxTokens.Click += new System.EventHandler(this.textBoxTokens_SelectionPotentiallyChanged);
-            this.textBoxTokens.DoubleClick += new System.EventHandler(this.textBoxTokens_SelectionPotentiallyChanged);
-            this.textBoxTokens.KeyUp += new System.Windows.Forms.KeyEventHandler(this.textBoxTokens_SelectionPotentiallyChanged);
-            // 
             // labelUnwrapped
             // 
             this.labelUnwrapped.AutoSize = true;
@@ -134,6 +118,22 @@
             this.labelOutputText.Size = new System.Drawing.Size(119, 13);
             this.labelOutputText.TabIndex = 8;
             this.labelOutputText.Text = "&Output text wrapped:";
+            // 
+            // textBoxTokens
+            // 
+            this.textBoxTokens.HideSelection = false;
+            this.textBoxTokens.Location = new System.Drawing.Point(8, 224);
+            this.textBoxTokens.Multiline = true;
+            this.textBoxTokens.Name = "textBoxTokens";
+            this.textBoxTokens.ReadOnly = true;
+            this.textBoxTokens.ScrollBars = System.Windows.Forms.ScrollBars.Both;
+            this.textBoxTokens.Size = new System.Drawing.Size(368, 168);
+            this.textBoxTokens.TabIndex = 3;
+            this.textBoxTokens.Text = "(click the Wrap button)";
+            this.textBoxTokens.WordWrap = false;
+            this.textBoxTokens.Click += new System.EventHandler(this.textBoxTokens_SelectionPotentiallyChanged);
+            this.textBoxTokens.DoubleClick += new System.EventHandler(this.textBoxTokens_SelectionPotentiallyChanged);
+            this.textBoxTokens.KeyUp += new System.Windows.Forms.KeyEventHandler(this.textBoxTokens_SelectionPotentiallyChanged);
             // 
             // labelInputText
             // 
@@ -221,7 +221,6 @@
             this.textBoxLineRanges.Click += new System.EventHandler(this.textBoxLineRanges_SelectionPotentiallyChanged);
             this.textBoxLineRanges.DoubleClick += new System.EventHandler(this.textBoxLineRanges_SelectionPotentiallyChanged);
             this.textBoxLineRanges.KeyUp += new System.Windows.Forms.KeyEventHandler(this.textBoxLineRanges_SelectionPotentiallyChanged);
-
             // 
             // labelWrapWidth
             // 

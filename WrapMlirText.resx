@@ -118,41 +118,41 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="textBoxInput.Text" xml:space="preserve">
-    <value>dxgml.module {
-  dxgml_subgraph.subgraph @subgraph attributes {configuration = #dxgml_subgraph.supported_config&lt;layoutCapabilities = {}, aliasingCapabilities = {}, foreign_config = {class_name = "ConvolutionSubgraph"}, requiredScratchMemorySizes = [398201472], requiredAlignments = &lt;arguments = [], scratchMemorySegments = [1]&gt;, preprocessedInputs = [], preprocessingInputs = [], preprocessedDataSizes = []&gt;, functional = @convolution_0, interface = #dxgml.interface&lt;name = "dxgml_subgraph", version = "0.1.0"&gt;} {
-    dxgml_subgraph.functional_definition private @convolution_0(%arg0: !dxgml.tensor&lt;1x4x2160x3840x!dxgml.float16&gt;, %arg1: !dxgml.tensor&lt;32x4x3x3x!dxgml.float16&gt;, %arg2: !dxgml.tensor&lt;32x!dxgml.float16&gt;) -&gt; !dxgml.tensor&lt;1x32x1080x1920x!dxgml.float16&gt; {
-      %0 = dxgml_op.convolution (%arg0, %arg1, %arg2) {dilations = #dxgml.dense_integer_elements&lt;[1, 1]&gt; : !dxgml.tensor&lt;2x!dxgml.int64&gt;, direction = #dxgml_op.convolution_direction_enum_attr&lt;convolution_direction_forward&gt;, end_padding = #dxgml.dense_integer_elements&lt;[1, 1]&gt; : !dxgml.tensor&lt;2x!dxgml.int64&gt;, group_count = #dxgml.integer&lt;1 : !dxgml.int64&gt;, mode = #dxgml_op.convolution_mode_enum_attr&lt;convolution_mode_cross_correlation&gt;, start_padding = #dxgml.dense_integer_elements&lt;[1, 1]&gt; : !dxgml.tensor&lt;2x!dxgml.int64&gt;, strides = #dxgml.dense_integer_elements&lt;[2, 2]&gt; : !dxgml.tensor&lt;2x!dxgml.int64&gt;} : (!dxgml.tensor&lt;1x4x2160x3840x!dxgml.float16&gt;, !dxgml.tensor&lt;32x4x3x3x!dxgml.float16&gt;, !dxgml.tensor&lt;32x!dxgml.float16&gt;) -&gt; !dxgml.tensor&lt;1x32x1080x1920x!dxgml.float16&gt;
-      dxgml.return %0 : !dxgml.tensor&lt;1x32x1080x1920x!dxgml.float16&gt;
+    <value>ml.module {
+  mlSubgraph.subgraph @subgraph attributes {configuration = #mlSubgraph.supportedConfig&lt;layoutCapabilities = {}, aliasingCapabilities = {}, foreignConfig = {className = "ConvolutionSubgraph"}, requiredScratchMemorySizes = [398201472], requiredAlignments = &lt;arguments = [], scratchMemorySegments = [1]&gt;, preprocessedInputs = [], preprocessingInputs = [], preprocessedDataSizes = []&gt;, functional = @convolution0, interface = #ml.interface&lt;name = "mlSubgraph", version = "0.1.0"&gt;} {
+    mlSubgraph.functionalDefinition private @convolution0(%arg0: !ml.tensor&lt;1x4x2160x3840x!ml.float16&gt;, %arg1: !ml.tensor&lt;32x4x3x3x!ml.float16&gt;, %arg2: !ml.tensor&lt;32x!ml.float16&gt;) -&gt; !ml.tensor&lt;1x32x1080x1920x!ml.float16&gt; {
+      %0 = mlOperator.convolution (%arg0, %arg1, %arg2) {dilations = #ml.denseIntegerElements&lt;[1, 1]&gt; : !ml.tensor&lt;2x!ml.int64&gt;, direction = #mlOperator.convolutionDirectionEnumAttr&lt;convolutionDirectionForward&gt;, endPadding = #ml.denseIntegerElements&lt;[1, 1]&gt; : !ml.tensor&lt;2x!ml.int64&gt;, groupCount = #ml.integer&lt;1 : !ml.int64&gt;, mode = #mlOperator.convolutionModeEnumAttr&lt;convolutionModeCrossCorrelation&gt;, startPadding = #ml.denseIntegerElements&lt;[1, 1]&gt; : !ml.tensor&lt;2x!ml.int64&gt;, strides = #ml.denseIntegerElements&lt;[2, 2]&gt; : !ml.tensor&lt;2x!ml.int64&gt;} : (!ml.tensor&lt;1x4x2160x3840x!ml.float16&gt;, !ml.tensor&lt;32x4x3x3x!ml.float16&gt;, !ml.tensor&lt;32x!ml.float16&gt;) -&gt; !ml.tensor&lt;1x32x1080x1920x!ml.float16&gt;
+      ml.return %0 : !ml.tensor&lt;1x32x1080x1920x!ml.float16&gt;
     }
   }
-  dxgml_partition.partition @partition(%arg0: !dxgml_memory.memref&lt;1x4x2160x3840x!dxgml.float16&gt;, %arg1: !dxgml_memory.memref&lt;32x4x3x3x!dxgml.float16&gt;, %arg2: !dxgml_memory.memref&lt;32x!dxgml.float16&gt;, %arg3: !dxgml_memory.memref&lt;1x32x1080x1920x!dxgml.float16&gt;, %arg4: !dxgml_memory.memref&lt;398201472x!dxgml.int8&gt;) {
-    dxgml.invoke @subgraph(%arg0, %arg1, %arg2, %arg3, %arg4) : (!dxgml_memory.memref&lt;1x4x2160x3840x!dxgml.float16&gt;, !dxgml_memory.memref&lt;32x4x3x3x!dxgml.float16&gt;, !dxgml_memory.memref&lt;32x!dxgml.float16&gt;, !dxgml_memory.memref&lt;1x32x1080x1920x!dxgml.float16&gt;, !dxgml_memory.memref&lt;398201472x!dxgml.int8&gt;) -&gt; ()
-    dxgml.return
+  mlPartition.partition @partition(%arg0: !mlMemory.memref&lt;1x4x2160x3840x!ml.float16&gt;, %arg1: !mlMemory.memref&lt;32x4x3x3x!ml.float16&gt;, %arg2: !mlMemory.memref&lt;32x!ml.float16&gt;, %arg3: !mlMemory.memref&lt;1x32x1080x1920x!ml.float16&gt;, %arg4: !mlMemory.memref&lt;398201472x!ml.int8&gt;) {
+    ml.invoke @subgraph(%arg0, %arg1, %arg2, %arg3, %arg4) : (!mlMemory.memref&lt;1x4x2160x3840x!ml.float16&gt;, !mlMemory.memref&lt;32x4x3x3x!ml.float16&gt;, !mlMemory.memref&lt;32x!ml.float16&gt;, !mlMemory.memref&lt;1x32x1080x1920x!ml.float16&gt;, !mlMemory.memref&lt;398201472x!ml.int8&gt;) -&gt; ()
+    ml.return
   }
-  dxgml_subgraph.subgraph @subgraph_2 attributes {configuration = #dxgml_subgraph.supported_config&lt;layoutCapabilities = {}, aliasingCapabilities = {}, foreign_config = {class_name = "ReluSubgraph"}, requiredScratchMemorySizes = [], requiredAlignments = &lt;arguments = [], scratchMemorySegments = []&gt;, preprocessedInputs = [], preprocessingInputs = [], preprocessedDataSizes = []&gt;, functional = @relu_1, interface = #dxgml.interface&lt;name = "dxgml_subgraph", version = "0.1.0"&gt;} {
-    dxgml_subgraph.functional_definition private @relu_1(%arg0: !dxgml.tensor&lt;1x32x1080x1920x!dxgml.float16&gt;) -&gt; !dxgml.tensor&lt;1x32x1080x1920x!dxgml.float16&gt; {
-      %0 = dxgml_op.relu (%arg0) : (!dxgml.tensor&lt;1x32x1080x1920x!dxgml.float16&gt;) -&gt; !dxgml.tensor&lt;1x32x1080x1920x!dxgml.float16&gt;
-      dxgml.return %0 : !dxgml.tensor&lt;1x32x1080x1920x!dxgml.float16&gt;
+  mlSubgraph.subgraph @subgraph2 attributes {configuration = #mlSubgraph.supportedConfig&lt;layoutCapabilities = {}, aliasingCapabilities = {}, foreignConfig = {className = "ReluSubgraph"}, requiredScratchMemorySizes = [], requiredAlignments = &lt;arguments = [], scratchMemorySegments = []&gt;, preprocessedInputs = [], preprocessingInputs = [], preprocessedDataSizes = []&gt;, functional = @relu1, interface = #ml.interface&lt;name = "mlSubgraph", version = "0.1.0"&gt;} {
+    mlSubgraph.functionalDefinition private @relu1(%arg0: !ml.tensor&lt;1x32x1080x1920x!ml.float16&gt;) -&gt; !ml.tensor&lt;1x32x1080x1920x!ml.float16&gt; {
+      %0 = mlOperator.relu (%arg0) : (!ml.tensor&lt;1x32x1080x1920x!ml.float16&gt;) -&gt; !ml.tensor&lt;1x32x1080x1920x!ml.float16&gt;
+      ml.return %0 : !ml.tensor&lt;1x32x1080x1920x!ml.float16&gt;
     }
   }
-  dxgml_partition.partition @partition_3(%arg0: !dxgml_memory.memref&lt;1x32x1080x1920x!dxgml.float16&gt;, %arg1: !dxgml_memory.memref&lt;1x32x1080x1920x!dxgml.float16&gt;) {
-    dxgml.invoke @subgraph_2(%arg0, %arg1) : (!dxgml_memory.memref&lt;1x32x1080x1920x!dxgml.float16&gt;, !dxgml_memory.memref&lt;1x32x1080x1920x!dxgml.float16&gt;) -&gt; ()
-    dxgml.return
+  mlPartition.partition @partition3(%arg0: !mlMemory.memref&lt;1x32x1080x1920x!ml.float16&gt;, %arg1: !mlMemory.memref&lt;1x32x1080x1920x!ml.float16&gt;) {
+    ml.invoke @subgraph2(%arg0, %arg1) : (!mlMemory.memref&lt;1x32x1080x1920x!ml.float16&gt;, !mlMemory.memref&lt;1x32x1080x1920x!ml.float16&gt;) -&gt; ()
+    ml.return
   }
-  dxgml.program @Conv_Relu_4(%arg0: !dxgml_memory.memref&lt;1x4x2160x3840x!dxgml.float16&gt;, %arg1: !dxgml_memory.memref&lt;1x32x1080x1920x!dxgml.float16&gt;, %arg2: !dxgml_memory.memref&lt;530911872x!dxgml.int8&gt;) {
-    %0 = dxgml_op.constant_value(0 : !dxgml.uint64)
-    %1 = dxgml_op.constant_value(132710400 : !dxgml.uint64)
-    %2 = dxgml_op.constant(&lt;_conv1.weight&gt;) : !dxgml_memory.memref&lt;32x4x3x3x!dxgml.float16&gt;
-    %3 = dxgml_op.constant(&lt;_conv1.bias&gt;) : !dxgml_memory.memref&lt;32x!dxgml.float16&gt;
-    %4 = dxgml_op.constant_value(0 : !dxgml.uint64)
-    %5 = dxgml_memory.view_memref %arg2[%4] : !dxgml_memory.memref&lt;530911872x!dxgml.int8&gt; to !dxgml_memory.memref&lt;1x32x1080x1920x!dxgml.float16&gt;
-    %6 = dxgml_op.constant_value(132710400 : !dxgml.uint64)
-    %7 = dxgml_memory.view_memref %arg2[%6] : !dxgml_memory.memref&lt;530911872x!dxgml.int8&gt; to !dxgml_memory.memref&lt;398201472x!dxgml.int8&gt;
-    dxgml.invoke @partition(%arg0, %2, %3, %5, %7) : (!dxgml_memory.memref&lt;1x4x2160x3840x!dxgml.float16&gt;, !dxgml_memory.memref&lt;32x4x3x3x!dxgml.float16&gt;, !dxgml_memory.memref&lt;32x!dxgml.float16&gt;, !dxgml_memory.memref&lt;1x32x1080x1920x!dxgml.float16&gt;, !dxgml_memory.memref&lt;398201472x!dxgml.int8&gt;) -&gt; ()
-    dxgml.invoke @partition_3(%5, %arg1) : (!dxgml_memory.memref&lt;1x32x1080x1920x!dxgml.float16&gt;, !dxgml_memory.memref&lt;1x32x1080x1920x!dxgml.float16&gt;) -&gt; ()
-    dxgml.return
+  ml.program @ConvRelu4(%arg0: !mlMemory.memref&lt;1x4x2160x3840x!ml.float16&gt;, %arg1: !mlMemory.memref&lt;1x32x1080x1920x!ml.float16&gt;, %arg2: !mlMemory.memref&lt;530911872x!ml.int8&gt;) {
+    %0 = mlOperator.constantValue(0 : !ml.uint64)
+    %1 = mlOperator.constantValue(132710400 : !ml.uint64)
+    %2 = mlOperator.constant(&lt;conv1.weight&gt;) : !mlMemory.memref&lt;32x4x3x3x!ml.float16&gt;
+    %3 = mlOperator.constant(&lt;conv1.bias&gt;) : !mlMemory.memref&lt;32x!ml.float16&gt;
+    %4 = mlOperator.constantValue(0 : !ml.uint64)
+    %5 = mlMemory.viewMemref %arg2[%4] : !mlMemory.memref&lt;530911872x!ml.int8&gt; to !mlMemory.memref&lt;1x32x1080x1920x!ml.float16&gt;
+    %6 = mlOperator.constantValue(132710400 : !ml.uint64)
+    %7 = mlMemory.viewMemref %arg2[%6] : !mlMemory.memref&lt;530911872x!ml.int8&gt; to !mlMemory.memref&lt;398201472x!ml.int8&gt;
+    ml.invoke @partition(%arg0, %2, %3, %5, %7) : (!mlMemory.memref&lt;1x4x2160x3840x!ml.float16&gt;, !mlMemory.memref&lt;32x4x3x3x!ml.float16&gt;, !mlMemory.memref&lt;32x!ml.float16&gt;, !mlMemory.memref&lt;1x32x1080x1920x!ml.float16&gt;, !mlMemory.memref&lt;398201472x!ml.int8&gt;) -&gt; ()
+    ml.invoke @partition3(%5, %arg1) : (!mlMemory.memref&lt;1x32x1080x1920x!ml.float16&gt;, !mlMemory.memref&lt;1x32x1080x1920x!ml.float16&gt;) -&gt; ()
+    ml.return
   }
-}</value>
+</value>
   </data>
   <data name="textBoxRuler.Text" xml:space="preserve">
     <value>[   0X   ][   1X   ][   2X   ][   3X   ][   4X   ][   5X   ][   6X   ][   7X   ][   8X   ][   9X   ][  10X   ][  11X   ][  12X   ][  13X   ][  14X   ][  15X   ]
