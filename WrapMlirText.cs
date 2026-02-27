@@ -33,8 +33,11 @@ namespace WrapMlirText
 
         private System.Windows.Forms.Timer timer; // Delay until updating wrapped text.
 
-        [DllImport("User32.dll", CharSet = CharSet.Unicode)]
-        public static extern IntPtr SendMessage(System.IntPtr windowHandle, int messageCode, int wParam, int[] lParam);
+        [DllImport("User32.dll", CharSet = CharSet.Unicode, EntryPoint="SendMessage")]
+        public static extern IntPtr SendMessageWithArray(System.IntPtr windowHandle, int messageCode, int wParam, int[] lParam);
+
+        [DllImport("User32.dll", CharSet = CharSet.Unicode, EntryPoint="SendMessage")]
+        public static extern int SendMessageWithInt(System.IntPtr windowHandle, int messageCode, int wParam, int lParam);
 
         public static uint TryParseWithDefault(string s, uint defaultValue) { return uint.TryParse(s, out uint value) ? value : defaultValue; }
         public uint MaximumLineLength => TryParseWithDefault(textBoxWrapWidth.Text, DefaultMaximumLineLength);
@@ -68,6 +71,13 @@ namespace WrapMlirText
             this.timer = new System.Windows.Forms.Timer();
             timer.Interval = 500; // Half second delay until rewrapping text.
             timer.Tick += new EventHandler(OnTimerWrap);
+
+            const int MaxInputLength = 1048576; // 1 MiB limit, which should be enough for testing and also prevent performance issues.
+            textBoxInput.MaxLength = MaxInputLength;
+            textBoxTokens.MaxLength = MaxInputLength;
+            textBoxBreakFlags.MaxLength = MaxInputLength;
+            textBoxLineRanges.MaxLength = MaxInputLength;
+            textBoxOutput.MaxLength = MaxInputLength;
         }
 
         private void formMain_Load(object sender, EventArgs e)
@@ -120,7 +130,7 @@ namespace WrapMlirText
 
         public void SetTabStops(System.Windows.Forms.TextBox textBox, int[] tabWidths)
         {
-            SendMessage(textBox.Handle, EM_SETTABSTOPS, tabWidths.Length, tabWidths);
+            SendMessageWithArray(textBox.Handle, EM_SETTABSTOPS, tabWidths.Length, tabWidths);
         }
 
         private void checkBoxWrap_CheckedChanged(object sender, EventArgs e)
@@ -253,28 +263,35 @@ namespace WrapMlirText
             return new IntervalUint { start = (uint)startLine, end = (uint)endLine };
         }
 
-        private void SelectTextBoxCharacterRange(System.Windows.Forms.TextBox textBox, uint startPosition, uint endPosition)
+        private bool SelectTextBoxCharacterRange(System.Windows.Forms.TextBox textBox, uint startPosition, uint endPosition)
         {
             // Silently ignore cases of illegal selections, which can happen if the text boxes are not populated yet.
-            if (startPosition < UInt32.MaxValue && endPosition < UInt32.MaxValue)
+            int previousSelectionStart = textBox.SelectionStart;
+            int previousSelectionLength = textBox.SelectionLength;
+
+            if (startPosition >= UInt32.MaxValue || endPosition >= UInt32.MaxValue ||
+                (startPosition == previousSelectionStart && previousSelectionLength == endPosition - startPosition))
             {
-                // Call ScrollToCaret differently depending on the direction of selection change.
-                int start = (int)startPosition;
-                int length = (int)(endPosition - startPosition);
-                if (startPosition != textBox.SelectionStart)
-                {
-                    textBox.SelectionStart = start;
-                    textBox.SelectionLength = 0;
-                    textBox.ScrollToCaret();
-                    textBox.SelectionLength = length;
-                }
-                else
-                {
-                    textBox.SelectionStart = start;
-                    textBox.SelectionLength = length;
-                    textBox.ScrollToCaret();
-                }
+                return false;
             }
+
+            // Call ScrollToCaret differently depending on the direction of selection change.
+            int start = (int)startPosition;
+            int length = (int)(endPosition - startPosition);
+            if (startPosition != textBox.SelectionStart)
+            {
+                textBox.SelectionStart = start;
+                textBox.SelectionLength = 0;
+                textBox.ScrollToCaret();
+                textBox.SelectionLength = length;
+            }
+            else
+            {
+                textBox.SelectionStart = start;
+                textBox.SelectionLength = length;
+                textBox.ScrollToCaret();
+            }
+            return true;
         }
 
         private void SelectTextBoxLineInterval(System.Windows.Forms.TextBox textBox, uint firstLineIndex, uint lastLineIndex)
@@ -335,7 +352,10 @@ namespace WrapMlirText
         {
             if (sender != textBoxInput)
             {
-                SelectTextBoxCharacterRange(textBoxInput, inputCharRange.start, inputCharRange.end);
+                if (!SelectTextBoxCharacterRange(textBoxInput, inputCharRange.start, inputCharRange.end))
+                {
+                    return; // Skip updating other text boxes too, since nothing to do.
+                }
             }
 
             if (sender != textBoxOutput)
