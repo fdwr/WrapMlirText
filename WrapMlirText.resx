@@ -152,7 +152,7 @@
     ml.invoke @partition3(%5, %arg1) : (!mlMemory.memref&lt;1x32x1080x1920x!ml.float16&gt;, !mlMemory.memref&lt;1x32x1080x1920x!ml.float16&gt;) -&gt; ()
     ml.return
   }
-</value>
+}</value>
   </data>
   <data name="textBoxRuler.Text" xml:space="preserve">
     <value>[   0X   ][   1X   ][   2X   ][   3X   ][   4X   ][   5X   ][   6X   ][   7X   ][   8X   ][   9X   ][  10X   ][  11X   ][  12X   ][  13X   ][  14X   ][  15X   ]
