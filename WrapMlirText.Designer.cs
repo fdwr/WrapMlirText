@@ -89,9 +89,9 @@
             this.textBoxInput.TabIndex = 1;
             this.textBoxInput.Text = resources.GetString("textBoxInput.Text");
             this.textBoxInput.Click += new System.EventHandler(this.textBoxInput_SelectionPotentiallyChanged);
+            this.textBoxInput.TextChanged += new System.EventHandler(this.textBoxInput_TextChanged);
             this.textBoxInput.DoubleClick += new System.EventHandler(this.textBoxInput_SelectionPotentiallyChanged);
             this.textBoxInput.KeyUp += new System.Windows.Forms.KeyEventHandler(this.textBoxInput_SelectionPotentiallyChanged);
-            this.textBoxInput.TextChanged += new System.EventHandler(this.textBoxInput_TextChanged);
             // 
             // labelTokens
             // 
@@ -281,7 +281,9 @@
             this.Controls.Add(this.textBoxOutput);
             this.Controls.Add(this.textBoxInput);
             this.Font = new System.Drawing.Font("Segoe UI", 8.25F);
+            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
+            this.MaximizeBox = false;
             this.Name = "formMain";
             this.Text = "MLIR Wrap Text";
             this.Load += new System.EventHandler(this.formMain_Load);
