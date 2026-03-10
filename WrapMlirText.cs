@@ -348,8 +348,42 @@ namespace WrapMlirText
             return textPosition;
         }
 
-        private void UpdateSelections(object sender, IntervalUint inputCharRange)
+        private void UpdateSelections(object sender)
         {
+            IntervalUint inputCharRange = new IntervalUint{ };
+
+            if (sender == textBoxInput)
+            {
+                inputCharRange = GetTextBoxSelectedCharacterRange(textBoxInput);
+            }
+            else if (sender == textBoxOutput)
+            {
+                var outputCharRange = GetTextBoxSelectedCharacterRange(textBoxOutput);
+
+                // Map output character range to input character range.
+                if (FindMatchingLineRangeIndex(this.outputLineRanges, outputCharRange.start) is uint firstLineIndex &&
+                    FindMatchingLineRangeIndex(this.outputLineRanges, outputCharRange.end) is uint lastLineIndex)
+                {
+                    inputCharRange.start = RemapTextPosition(outputCharRange.start, firstLineIndex, this.outputLineRanges, this.lineRanges);
+                    inputCharRange.end = RemapTextPosition(outputCharRange.end, lastLineIndex, this.outputLineRanges, this.lineRanges);
+                }
+            }
+            else if (sender == textBoxTokens)
+            {
+                var lineInterval = GetTextBoxSelectedLineInterval((TextBox)sender);
+                inputCharRange = GetCharacterRangeFromLineInterval(this.tokenRanges, lineInterval);
+            }
+            else if (sender == textBoxBreakFlags)
+            {
+                inputCharRange = GetTextBoxSelectedLineInterval((TextBox)sender);
+                inputCharRange.end = Math.Max(inputCharRange.end + 1, inputCharRange.start + 1); // Highlight at least character.
+            }
+            else if (sender == textBoxLineRanges)
+            {
+                var lineInterval = GetTextBoxSelectedLineInterval((TextBox)sender);
+                inputCharRange = GetCharacterRangeFromLineInterval(this.lineRanges, lineInterval);
+            }
+
             if (sender != textBoxInput)
             {
                 if (!SelectTextBoxCharacterRange(textBoxInput, inputCharRange.start, inputCharRange.end))
@@ -400,44 +434,27 @@ namespace WrapMlirText
 
         private void textBoxInput_SelectionPotentiallyChanged(object sender, EventArgs e)
         {
-            var charRange = GetTextBoxSelectedCharacterRange(textBoxInput);
-            UpdateSelections(sender, charRange);
+            UpdateSelections(sender);
         }
 
         private void textBoxOutput_SelectionPotentiallyChanged(object sender, EventArgs e)
         {
-            var outputCharRange = GetTextBoxSelectedCharacterRange(textBoxOutput);
-
-            // Map output character range to input character range.
-            if (FindMatchingLineRangeIndex(this.outputLineRanges, outputCharRange.start) is uint firstLineIndex &&
-                FindMatchingLineRangeIndex(this.outputLineRanges, outputCharRange.end) is uint lastLineIndex)
-            {
-                IntervalUint inputCharRange;
-                inputCharRange.start = RemapTextPosition(outputCharRange.start, firstLineIndex, this.outputLineRanges, this.lineRanges);
-                inputCharRange.end   = RemapTextPosition(outputCharRange.end, lastLineIndex, this.outputLineRanges, this.lineRanges);
-                UpdateSelections(sender, inputCharRange);
-            }
+            UpdateSelections(sender);
         }
 
         private void textBoxTokens_SelectionPotentiallyChanged(object sender, EventArgs e)
         {
-            var lineInterval = GetTextBoxSelectedLineInterval((TextBox)sender);
-            var charRange = GetCharacterRangeFromLineInterval(this.tokenRanges, lineInterval);
-            UpdateSelections(sender, charRange);
+            UpdateSelections(sender);
         }
 
         private void textBoxBreakFlags_SelectionPotentiallyChanged(object sender, EventArgs e)
         {
-            var lineInterval = GetTextBoxSelectedLineInterval((TextBox)sender);
-            lineInterval.end = Math.Max(lineInterval.end + 1, lineInterval.start + 1); // Highlight at least character.
-            UpdateSelections(sender, lineInterval);
+            UpdateSelections(sender);
         }
 
         private void textBoxLineRanges_SelectionPotentiallyChanged(object sender, EventArgs e)
         {
-            var lineInterval = GetTextBoxSelectedLineInterval((TextBox)sender);
-            var charRange = GetCharacterRangeFromLineInterval(this.lineRanges, lineInterval);
-            UpdateSelections(sender, charRange);
+            UpdateSelections(sender);
         }
 
         private void textBoxInput_TextChanged(object sender, EventArgs e)
@@ -450,8 +467,7 @@ namespace WrapMlirText
         {
             timer.Stop();
             WrapInputText();
-            var charRange = GetTextBoxSelectedCharacterRange(textBoxInput);
-            UpdateSelections(source, charRange);
+            UpdateSelections(textBoxInput);
         }
     }
 }
